@@ -1,22 +1,16 @@
-use crate::Tree::{Node, Leaf};
-use crate::std::fmt::Debug;
+mod parser;
+mod tree;
 
-enum Tree {
-    Node(char, Box<Tree>, Box<Tree>),
-    Leaf(i32),
-}
+pub use crate::parser::stringparser;
+pub use crate::tree::treebuilder;
 
-fn buildTree(operator: &str, left: i32, right: i32) -> Tree {
-    let tree = Tree::Node(operator.parse().unwrap(), 
-                      Box::new(Tree::Leaf(left)), 
-                      Box::new(Tree::Leaf(right)));
-    return tree;
-}
 
 fn main() {
-    // let _string = "1 + 2 + 1";
+    let string = "1 + 2 + 1";
+    
+    let parsed = stringparser::try_parse(string);
+    println!("{:#?}", parsed);
 
-    let tree: Tree = buildTree("+", 1, 2);
-
-    println!("{:#?}", tree);
+    // let tree = treebuilder::build_tree("+", 1, 2);
+    // println!("{:#?}", tree);
 }
