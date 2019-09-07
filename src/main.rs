@@ -4,7 +4,6 @@ mod tree;
 pub use crate::parser::stringparser;
 pub use crate::tree::treebuilder;
 
-
 fn main() {
     let string = "1 + 2 + 1";
     
