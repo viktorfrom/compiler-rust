@@ -9,30 +9,41 @@ use nom::{
 };
 
 fn parse_expr(string: &str) -> IResult <&str, &str> {
-    let a: IResult<&str, &str> = preceded(multispace0, 
+    let result: IResult<&str, &str> = preceded(multispace0, 
             alt((tag("+"), digit1)
             ))(string);
-    return a
-
-}
-
-fn main() {
-    let string = "   1 + 2 + 1";
-
-
-    let res = parse_expr(string);
-    println!("{:?}", res.unwrap().1);
+    return result
 }
 
 #[derive(Debug)]
-pub enum Tree {
-    Root(char, Box<Tree>, Box<Tree>),
+pub enum Node {
+    Root(char, Box<Node>, Box<Node>),
     Leaf(i32),
 }
 
-fn build_tree(operator: &str, left: i32, right: i32) -> Tree { // ska vara Box<Tree> ist for i32 vid recursion
-    let tree = Tree::Root(operator.parse().unwrap(), 
-                    Box::new(Tree::Leaf(left)), 
-                    Box::new(Tree::Leaf(right)));
-    return tree;
+fn build_tree(string: &str) -> Node { 
+    let result = parse_expr(string);
+
+    if result.clone().unwrap().0.len() == 0 {
+        Node::Leaf(result.clone().unwrap().1.parse::<i32>().unwrap())
+
+    } else {
+        let right = parse_expr(result.clone().unwrap().0).unwrap().0;
+        let left = result.clone().unwrap().1;
+        let op = parse_expr(result.clone().unwrap().0).unwrap().1;
+
+        println!("{:#?}, {:#?}, {:#?}", left, op, right);
+        let tree = Node::Root(op.parse().unwrap(), 
+                        Box::new(Node::Leaf(left.parse::<i32>().unwrap())), 
+                        Box::new(build_tree(right)));
+        return tree;
+    }
+}
+
+
+fn main() {
+    let string = "        1 + 2 +1";
+    let tree = build_tree(string);
+
+    println!("{:#?}", tree);
 }
