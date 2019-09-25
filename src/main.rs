@@ -92,12 +92,15 @@ fn parse_expr(string: &str) -> IResult<&str, Expr> {
         alt((
             map(
                 tuple((
-                    alt((parse_i32, parse_bool)),
+                    alt((parse_paren, parse_i32, parse_bool)),
                     alt((parse_op, parse_binop)),
                     parse_expr,
                 )),
-                |(left, op, right)| Expr::AriNode(Box::new(left), Box::new(op), Box::new(right)),
+                |(left, operator, right)| {
+                    Expr::AriNode(Box::new(left), Box::new(operator), Box::new(right))
+                },
             ),
+            parse_bool,
             parse_i32,
             parse_paren,
         )),
@@ -117,7 +120,8 @@ fn main() {
     // let string = "        11 + 2 -1 / (5     *      3)                 ;";
     // let string = "            true && false >>           true       ;";
     // let string = "((1 + 2) - (1 + 3))";
-    let string = "(1 + (2 - (3)))";
+    // let string = "(1 + (2 - (3)))";
+    let string = "(((1) - 2) + 3)";
 
     let tree = parse_expr(string);
     println!("{:#?}", tree.unwrap().1);
