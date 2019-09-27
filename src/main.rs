@@ -11,7 +11,7 @@ use nom::{
 
 #[derive(Debug)]
 pub enum Expr {
-    AriNode(Box<Expr>, Box<Expr>, Box<Expr>),
+    Node(Box<Expr>, Box<Expr>, Box<Expr>),
     Num(i32),
     Bool(Bool),
     LogOp(LogOp),
@@ -86,7 +86,7 @@ fn parse_i32(input: &str) -> IResult<&str, Expr> {
     Ok((substring, Expr::Num(digit.parse::<i32>().unwrap())))
 }
 
-fn parse_expr(string: &str) -> IResult<&str, Expr> {
+fn parse_expr(input: &str) -> IResult<&str, Expr> {
     delimited(
         multispace0,
         alt((
@@ -97,7 +97,7 @@ fn parse_expr(string: &str) -> IResult<&str, Expr> {
                     parse_expr,
                 )),
                 |(left, operator, right)| {
-                    Expr::AriNode(Box::new(left), Box::new(operator), Box::new(right))
+                    Expr::Node(Box::new(left), Box::new(operator), Box::new(right))
                 },
             ),
             parse_bool,
@@ -105,7 +105,7 @@ fn parse_expr(string: &str) -> IResult<&str, Expr> {
             parse_paren,
         )),
         multispace0,
-    )(string)
+    )(input)
 }
 
 fn parse_paren(input: &str) -> IResult<&str, Expr> {
@@ -116,13 +116,54 @@ fn parse_paren(input: &str) -> IResult<&str, Expr> {
     )(input)
 }
 
+#[derive(Debug)]
+pub enum Content {
+    Num(i32),
+    Add,
+}
+
+fn interpreter(input: Expr) -> Content {
+    match input {
+        Expr::AriOp(Add) => Content::Add,
+        Expr::Num(int) => Content::Num(int),
+        Expr::Node(left, operator, right) => eval_expr(
+            interpreter(*left),
+            interpreter(*operator),
+            interpreter(*right),
+        ),
+        _ => (panic!("Invalid input!")),
+    }
+}
+
+fn eval_expr(left: Content, operator: Content, right: Content) -> Content {
+    let l: i32;
+    let r: i32;
+
+    match left {
+        Content::Num(num) => l = num,
+        _ => panic!("Invalid input!"),
+    }
+
+    match right {
+        Content::Num(num) => r = num,
+        _ => panic!("Invalid input!"),
+    }
+
+    match operator {
+        Content::Add => Content::Num(l + r),
+        _ => panic!("Invalid input!"),
+    }
+}
+
 fn main() {
     // let string = "        11 + 2 -1 / (5     *      3)                 ;";
     // let string = "            true && false >>           true       ;";
     // let string = "((1 + 2) - (1 + 3))";
     // let string = "(1 + (2 - (3)))";
-    let string = "(((1) - 2) + 3)";
+    // let string = "(((1) - 2) + 3)";
+    let string = "1 + 2";
+    // cat(tag(")")) for att parsa "("                  ")"
 
-    let tree = parse_expr(string);
-    println!("{:#?}", tree.unwrap().1);
+    let tree = interpreter(parse_expr(string).unwrap().1);
+    println!("{:#?}", tree);
 }
