@@ -14,15 +14,15 @@ pub enum Expr {
     Node(Box<Expr>, Box<Expr>, Box<Expr>),
     Num(i32),
     Bool(Bool),
-    LogOp(LogOp),
-    AriOp(AriOp),
+    LogicOp(LogicOp),
+    ArithOp(ArithOp),
     // Id(String),
     // UnOp(Op, Box<Tree>),
     // Application(Id, vec<Tree>)
 }
 
 #[derive(Debug)]
-pub enum AriOp {
+pub enum ArithOp {
     Add,
     Sub,
     Mult,
@@ -36,7 +36,7 @@ pub enum Bool {
 }
 
 #[derive(Debug)]
-pub enum LogOp {
+pub enum LogicOp {
     And,
     Or,
     Les,
@@ -47,10 +47,10 @@ fn parse_binop(input: &str) -> IResult<&str, Expr> {
     delimited(
         multispace0,
         alt((
-            map(tag("&&"), |_| Expr::LogOp(LogOp::And)),
-            map(tag("||"), |_| Expr::LogOp(LogOp::Or)),
-            map(tag("<<"), |_| Expr::LogOp(LogOp::Les)),
-            map(tag(">>"), |_| Expr::LogOp(LogOp::Gre)),
+            map(tag("&&"), |_| Expr::LogicOp(LogicOp::And)),
+            map(tag("||"), |_| Expr::LogicOp(LogicOp::Or)),
+            map(tag("<<"), |_| Expr::LogicOp(LogicOp::Les)),
+            map(tag(">>"), |_| Expr::LogicOp(LogicOp::Gre)),
         )),
         multispace0,
     )(input)
@@ -60,10 +60,10 @@ fn parse_op(input: &str) -> IResult<&str, Expr> {
     delimited(
         multispace0,
         alt((
-            map(tag("+"), |_| Expr::AriOp(AriOp::Add)),
-            map(tag("-"), |_| Expr::AriOp(AriOp::Sub)),
-            map(tag("*"), |_| Expr::AriOp(AriOp::Mult)),
-            map(tag("/"), |_| Expr::AriOp(AriOp::Div)),
+            map(tag("+"), |_| Expr::ArithOp(ArithOp::Add)),
+            map(tag("-"), |_| Expr::ArithOp(ArithOp::Sub)),
+            map(tag("*"), |_| Expr::ArithOp(ArithOp::Mult)),
+            map(tag("/"), |_| Expr::ArithOp(ArithOp::Div)),
         )),
         multispace0,
     )(input)
