@@ -5,7 +5,7 @@ use nom::{
     bytes::complete::tag,
     character::complete::{alphanumeric0, digit1, multispace0},
     combinator::map,
-    sequence::{preceded, delimited, terminated, tuple},
+    sequence::{delimited, preceded, tuple},
     IResult,
 };
 
@@ -16,9 +16,9 @@ pub enum Expr {
     Bool(bool),
     LogicOp(LogicOp),
     ArithOp(ArithOp),
+    AssignOp(AssignOp),
     Type(Type),
-    Func(Func),
-    // Id(String),
+    Str(String),
     // UnOp(Op, Box<Tree>),
     // Application(Id, vec<Tree>)
 }
@@ -35,36 +35,24 @@ pub enum ArithOp {
 pub enum LogicOp {
     And,
     Or,
-    Les,
-    Gre,
+    Not,
+}
+
+#[derive(Debug)]
+pub enum AssignOp {
+    Equ,
+    PluEq,
+    MinEq,
+    DivEq,
 }
 
 #[derive(Debug)]
 pub enum Type {
     Integer,
-    Bool
+    Bool,
 }
 
-#[derive(Debug)]
-pub enum Func {
-    Let,
-    Value,
-}
-
-fn parse_binop(input: &str) -> IResult<&str, Expr> {
-    delimited(
-        multispace0,
-        alt((
-            map(tag("&&"), |_| Expr::LogicOp(LogicOp::And)),
-            map(tag("||"), |_| Expr::LogicOp(LogicOp::Or)),
-            map(tag("<<"), |_| Expr::LogicOp(LogicOp::Les)),
-            map(tag(">>"), |_| Expr::LogicOp(LogicOp::Gre)),
-        )),
-        multispace0,
-    )(input)
-}
-
-fn parse_op(input: &str) -> IResult<&str, Expr> {
+fn parse_ari_op(input: &str) -> IResult<&str, Expr> {
     delimited(
         multispace0,
         alt((
@@ -72,6 +60,31 @@ fn parse_op(input: &str) -> IResult<&str, Expr> {
             map(tag("-"), |_| Expr::ArithOp(ArithOp::Sub)),
             map(tag("*"), |_| Expr::ArithOp(ArithOp::Mult)),
             map(tag("/"), |_| Expr::ArithOp(ArithOp::Div)),
+        )),
+        multispace0,
+    )(input)
+}
+
+fn parse_log_op(input: &str) -> IResult<&str, Expr> {
+    delimited(
+        multispace0,
+        alt((
+            map(tag("&&"), |_| Expr::LogicOp(LogicOp::And)),
+            map(tag("||"), |_| Expr::LogicOp(LogicOp::Or)),
+            map(tag("!"), |_| Expr::LogicOp(LogicOp::Not)),
+        )),
+        multispace0,
+    )(input)
+}
+
+fn parse_assign_op(input: &str) -> IResult<&str, Expr> {
+    delimited(
+        multispace0,
+        alt((
+            map(tag("="), |_| Expr::AssignOp(AssignOp::Equ)),
+            map(tag("+="), |_| Expr::AssignOp(AssignOp::PluEq)),
+            map(tag("-="), |_| Expr::AssignOp(AssignOp::MinEq)),
+            map(tag("/="), |_| Expr::AssignOp(AssignOp::DivEq)),
         )),
         multispace0,
     )(input)
@@ -113,14 +126,45 @@ fn parse_type(input: &str) -> IResult<&str, Expr> {
     )(input)
 }
 
+fn parse_var(input: &str) -> IResult<&str, Expr> {
+    delimited(
+        multispace0,
+        map(alphanumeric0, |var: &str| Expr::Str(var.to_string())),
+        multispace0,
+    )(input)
+}
+
+pub fn parse_let(input: &str) -> IResult<&str, Expr> {
+    let (substring, (var, _, _)) = delimited(
+        preceded(multispace0, tag("let")),
+        tuple((
+            parse_var,
+            preceded(tag(":"), parse_type),
+            parse_assign_op,
+        )),
+        multispace0,
+    )(input)?;
+
+    Ok((substring, var))
+}
+pub fn get_var(input: &str) -> IResult<&str, Expr> {
+    let var = parse_let(input).unwrap().1;
+    Ok(("", var))
+}
+
+pub fn get_expr(input: &str) -> IResult<&str, Expr> {
+    let expr = parse_let(input).unwrap().0;
+    Ok(("", Expr::Str(expr.to_string())))
+}
+
 pub fn parse_expr(input: &str) -> IResult<&str, Expr> {
     delimited(
         multispace0,
         alt((
             map(
                 tuple((
-                    alt((parse_paren, parse_i32, parse_bool)),
-                    alt((parse_op, parse_binop, parse_type)),
+                    alt((parse_paren, parse_i32, parse_bool, get_var)),
+                    alt((parse_ari_op, parse_log_op, parse_type)),
                     parse_expr,
                 )),
                 |(left, operator, right)| {
@@ -130,6 +174,7 @@ pub fn parse_expr(input: &str) -> IResult<&str, Expr> {
             parse_bool,
             parse_i32,
             parse_paren,
+            get_expr
         )),
         multispace0,
     )(input)
