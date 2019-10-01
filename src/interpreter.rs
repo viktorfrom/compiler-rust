@@ -19,6 +19,7 @@ pub enum ContentOp {
     Or,
     Les,
     Gre,
+    Not,
 }
 
 pub fn interp_expr(input: Expr) -> Content {
@@ -36,8 +37,7 @@ pub fn interp_expr(input: Expr) -> Content {
         Expr::LogicOp(op) => match op {
             LogicOp::And => Content::ContentOp(ContentOp::And),
             LogicOp::Or => Content::ContentOp(ContentOp::Or),
-            LogicOp::Les => Content::ContentOp(ContentOp::Les),
-            LogicOp::Gre => Content::ContentOp(ContentOp::Gre),
+            LogicOp::Not => Content::ContentOp(ContentOp::Not),
         },
 
         Expr::Node(left, operator, right) => bool_eval(
