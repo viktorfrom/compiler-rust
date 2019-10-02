@@ -17,6 +17,7 @@ pub enum Expr {
     LogicOp(LogicOp),
     ArithOp(ArithOp),
     AssignOp(AssignOp),
+    RelOp(RelOp),
     Type(Type),
     Str(String),
     // UnOp(Op, Box<Tree>),
@@ -41,9 +42,19 @@ pub enum LogicOp {
 #[derive(Debug)]
 pub enum AssignOp {
     Equ,
-    PluEq,
-    MinEq,
-    DivEq,
+    PluEqu,
+    MinEqu,
+    DivEqu,
+}
+
+#[derive(Debug)]
+pub enum RelOp {
+    EquEqu,
+    NotEqu,
+    LesEqu,
+    GreEqu,
+    Les, 
+    Gre,
 }
 
 #[derive(Debug)]
@@ -82,9 +93,24 @@ fn parse_assign_op(input: &str) -> IResult<&str, Expr> {
         multispace0,
         alt((
             map(tag("="), |_| Expr::AssignOp(AssignOp::Equ)),
-            map(tag("+="), |_| Expr::AssignOp(AssignOp::PluEq)),
-            map(tag("-="), |_| Expr::AssignOp(AssignOp::MinEq)),
-            map(tag("/="), |_| Expr::AssignOp(AssignOp::DivEq)),
+            map(tag("+="), |_| Expr::AssignOp(AssignOp::PluEqu)),
+            map(tag("-="), |_| Expr::AssignOp(AssignOp::MinEqu)),
+            map(tag("/="), |_| Expr::AssignOp(AssignOp::DivEqu)),
+        )),
+        multispace0,
+    )(input)
+}
+
+fn parse_rel_op(input: &str) -> IResult<&str, Expr> {
+    delimited(
+        multispace0,
+        alt((
+            map(tag("=="), |_| Expr::RelOp(RelOp::EquEqu)),
+            map(tag("!="), |_| Expr::RelOp(RelOp::NotEqu)),
+            map(tag("<="), |_| Expr::RelOp(RelOp::LesEqu)),
+            map(tag(">="), |_| Expr::RelOp(RelOp::GreEqu)),
+            map(tag("<"), |_| Expr::RelOp(RelOp::Les)),
+            map(tag(">="), |_| Expr::RelOp(RelOp::Gre)),
         )),
         multispace0,
     )(input)
@@ -128,15 +154,31 @@ fn parse_type(input: &str) -> IResult<&str, Expr> {
 
 fn parse_var(input: &str) -> IResult<&str, Expr> {
     delimited(
-        delimited(multispace0, tag("let"), multispace0),
+        multispace0,
         map(alphanumeric0, |var: &str| Expr::Str(var.to_string())),
         multispace0,
     )(input)
 }
 
+pub fn parse_if(input: &str) -> IResult<&str, Expr> {
+    let (substring, (var, var_type, expr)) = delimited(
+        delimited(multispace0, tag("if"), multispace0),
+        tuple((
+            parse_var,
+            parse_rel_op,
+            alt((parse_var, parse_i32)),
+        )),
+        multispace0,
+    )(input)?;
+
+    println!("var = {:#?}, type = {:#?}, expr = {:#?}", var, var_type, expr);
+
+    // Ok((substring, var))
+    Ok((substring, Expr::Node(Box::new(var), Box::new(var_type), Box::new(expr))))
+}
 pub fn parse_let(input: &str) -> IResult<&str, Expr> {
     let (substring, (var, var_type, expr)) = delimited(
-        multispace0,
+        delimited(multispace0, tag("let"), multispace0),
         tuple((
             parse_var,
             preceded(tag(":"), parse_type),

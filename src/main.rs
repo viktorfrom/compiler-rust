@@ -11,10 +11,10 @@ fn main() {
     // let string = "(1 + (2 - (3)))";
     // let string = "(((1) - 2) + 3)";
     // let string = "3 * 2";
-    // cat(tag(")")) for att parsa "("                  ")"
-
-    let string = "let a: i32 = 3 + 2 + 4";
-    let tree = parser::parse_let(string);
+    // let string = "let a: i32 = 3 + 2 + 4";
+    // let string = "fn a(b: i32) { return 1 }";
+    let string = " if a == 1 { }";
+    let tree = parser::parse_if(string);
     println!("{:#?}", tree);
 
     // let tree = parse_expr(string).unwrap().1;
