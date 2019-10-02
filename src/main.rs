@@ -14,7 +14,7 @@ fn main() {
     // cat(tag(")")) for att parsa "("                  ")"
 
     let string = "let a: i32 = 3 + 2 + 4";
-    let tree = parser::get_expr(string);
+    let tree = parser::parse_let(string);
     println!("{:#?}", tree);
 
     // let tree = parse_expr(string).unwrap().1;
