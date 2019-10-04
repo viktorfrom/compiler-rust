@@ -10,7 +10,7 @@ use nom::{
     IResult,
 };
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Expr {
     Node(Box<Expr>, Box<Expr>, Box<Expr>),
     Num(i32),
@@ -28,7 +28,7 @@ pub enum Expr {
     // Application(Id, vec<Tree>)
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum ArithOp {
     Add,
     Sub,
@@ -36,14 +36,14 @@ pub enum ArithOp {
     Div,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum LogicOp {
     And,
     Or,
     Not,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum AssignOp {
     Equ,
     PluEqu,
@@ -51,7 +51,7 @@ pub enum AssignOp {
     DivEqu,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum RelOp {
     EquEqu,
     NotEqu,
@@ -61,7 +61,7 @@ pub enum RelOp {
     Gre,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Type {
     Integer,
     Bool,
@@ -146,7 +146,7 @@ fn parse_i32(input: &str) -> IResult<&str, Expr> {
     Ok((substring, Expr::Num(digit.parse::<i32>().unwrap())))
 }
 
-fn parse_type(input: &str) -> IResult<&str, Expr> {
+pub fn parse_type(input: &str) -> IResult<&str, Expr> {
     delimited(
         multispace0,
         alt((
@@ -169,15 +169,11 @@ fn parse_var(input: &str) -> IResult<&str, Expr> {
 pub fn parse_if(input: &str) -> IResult<&str, Expr> {
     let (substring, (expr, block)) = delimited(
         delimited(multispace0, tag("if"), multispace0),
-        tuple((
-            parse_expr,
-            delimited(tag("{"), parse_block, tag("}")),
-        )),
+        tuple((parse_expr, delimited(tag("{"), parse_block, tag("}")))),
         multispace0,
     )(input)?;
 
     println!("expr = {:#?}, block = {:#?}", expr, block);
-
 
     Ok((substring, Expr::If(Box::new(expr), block)))
 }
@@ -279,4 +275,16 @@ pub fn parse_expr(input: &str) -> IResult<&str, Expr> {
         )),
         multispace0,
     )(input)
+}
+
+#[cfg(test)]
+mod parse_tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_type() {
+        assert_eq!(parse_type("i32"), Ok(("", Expr::Type(Type::Integer))));
+        assert_eq!(parse_type("bool"), Ok(("", Expr::Type(Type::Bool))));
+        assert_eq!(parse_type("String"), Ok(("", Expr::Type(Type::Str))));
+    }
 }
