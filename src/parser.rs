@@ -2,10 +2,11 @@ extern crate nom;
 
 use nom::{
     branch::alt,
-    bytes::complete::tag,
+    bytes::complete::{is_not, tag},
     character::complete::{alphanumeric0, digit1, multispace0},
     combinator::map,
-    sequence::{delimited, preceded, tuple},
+    multi::many0,
+    sequence::{delimited, preceded, terminated, tuple},
     IResult,
 };
 
@@ -20,6 +21,9 @@ pub enum Expr {
     RelOp(RelOp),
     Type(Type),
     Str(String),
+    Tuple(Box<Expr>, Box<Expr>),
+    If(Box<Expr>, Vec<Expr>),
+    Func(Box<Expr>, Vec<Expr>, Vec<Expr>),
     // UnOp(Op, Box<Tree>),
     // Application(Id, vec<Tree>)
 }
@@ -53,7 +57,7 @@ pub enum RelOp {
     NotEqu,
     LesEqu,
     GreEqu,
-    Les, 
+    Les,
     Gre,
 }
 
@@ -61,6 +65,7 @@ pub enum RelOp {
 pub enum Type {
     Integer,
     Bool,
+    Str,
 }
 
 fn parse_ari_op(input: &str) -> IResult<&str, Expr> {
@@ -147,6 +152,7 @@ fn parse_type(input: &str) -> IResult<&str, Expr> {
         alt((
             map(tag("i32"), |_| Expr::Type(Type::Integer)),
             map(tag("bool"), |_| Expr::Type(Type::Bool)),
+            map(tag("String"), |_| Expr::Type(Type::Str)),
         )),
         multispace0,
     )(input)
@@ -161,21 +167,81 @@ fn parse_var(input: &str) -> IResult<&str, Expr> {
 }
 
 pub fn parse_if(input: &str) -> IResult<&str, Expr> {
-    let (substring, (var, var_type, expr)) = delimited(
+    let (substring, (expr, block)) = delimited(
         delimited(multispace0, tag("if"), multispace0),
         tuple((
-            parse_var,
-            parse_rel_op,
-            alt((parse_var, parse_i32)),
+            parse_expr,
+            delimited(tag("{"), parse_block, tag("}")),
         )),
         multispace0,
     )(input)?;
 
-    println!("var = {:#?}, type = {:#?}, expr = {:#?}", var, var_type, expr);
+    println!("expr = {:#?}, block = {:#?}", expr, block);
 
-    // Ok((substring, var))
-    Ok((substring, Expr::Node(Box::new(var), Box::new(var_type), Box::new(expr))))
+
+    Ok((substring, Expr::If(Box::new(expr), block)))
 }
+pub fn parse_block(input: &str) -> IResult<&str, Vec<Expr>> {
+    delimited(
+        multispace0,
+        many0(alt((
+            terminated(parse_let, terminated(tag(";"), multispace0)),
+            parse_return,
+        ))),
+        multispace0,
+    )(input)
+}
+
+pub fn parse_func(input: &str) -> IResult<&str, Expr> {
+    let (substring, (arg, var_type, expr)) = delimited(
+        delimited(
+            multispace0,
+            alt((
+                tag("fn"),
+                preceded(tag("pub"), preceded(multispace0, tag("fn"))),
+            )),
+            multispace0,
+        ),
+        tuple((
+            parse_var,
+            // delimited(tag("("), parse_var, tag(":")),
+            // preceded(parse_type, tag(",")),
+            multispace0,
+            multispace0,
+        )),
+        multispace0,
+    )(input)?;
+
+    println!(
+        "arg = {:#?}, type = {:#?}, expr = {:#?}",
+        arg, var_type, expr
+    );
+
+    Ok((substring, Expr::Num(1)))
+    // Ok((substring, Expr::Node(Box::new(var), Box::new(var_type), Box::new(expr))))
+}
+
+pub fn parse_param(input: &str) -> IResult<&str, Vec<Expr>> {
+    delimited(
+        multispace0,
+        many0(map(
+            tuple((terminated(parse_var, tag(":")), parse_type)),
+            |(arg, arg_type)| Expr::Tuple(Box::new(arg), Box::new(arg_type)),
+        )),
+        multispace0,
+    )(input)
+}
+
+pub fn parse_return(input: &str) -> IResult<&str, Expr> {
+    let (substring, return_type) = delimited(
+        delimited(multispace0, tag("->"), multispace0),
+        parse_type,
+        multispace0,
+    )(input)?;
+
+    Ok((substring, return_type))
+}
+
 pub fn parse_let(input: &str) -> IResult<&str, Expr> {
     let (substring, (var, var_type, expr)) = delimited(
         delimited(multispace0, tag("let"), multispace0),
@@ -186,10 +252,11 @@ pub fn parse_let(input: &str) -> IResult<&str, Expr> {
         )),
         multispace0,
     )(input)?;
-    // println!("var = {:#?}, type = {:#?}, expr = {:#?}", var, var_type, expr);
 
-    // Ok((substring, var))
-    Ok((substring, Expr::Node(Box::new(var), Box::new(var_type), Box::new(expr))))
+    Ok((
+        substring,
+        Expr::Node(Box::new(var), Box::new(var_type), Box::new(expr)),
+    ))
 }
 
 pub fn parse_expr(input: &str) -> IResult<&str, Expr> {
@@ -198,8 +265,8 @@ pub fn parse_expr(input: &str) -> IResult<&str, Expr> {
         alt((
             map(
                 tuple((
-                    alt((parse_paren, parse_i32, parse_bool)),
-                    alt((parse_ari_op, parse_log_op, parse_type)),
+                    alt((parse_paren, parse_i32, parse_bool, parse_var)),
+                    alt((parse_ari_op, parse_log_op, parse_rel_op, parse_type)),
                     parse_expr,
                 )),
                 |(left, operator, right)| {
