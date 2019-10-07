@@ -270,4 +270,52 @@ mod parse_tests {
     fn test_parse_i32() {
         assert_eq!(parse_i32("1"), Ok(("", Expr::Num(1))));
     }
+
+    #[test]
+    fn test_right_expr_arith() {
+        assert!(parse_right_expr("        11 + 2 -1 / (5     *      3)                 ;").is_ok());
+        assert!(parse_right_expr("((1 + 2) - (1 + 3))").is_ok());
+        assert!(parse_right_expr("((1 + 2) - (1 + 3))").is_ok());
+        assert!(parse_right_expr("true && false").is_ok());
+        assert!(parse_right_expr("a == 1").is_ok());
+    }
+
+    #[test]
+    fn test_parse_let() {
+        assert!(parse_let("let a: i32 = 3 + 2 + 4").is_ok());
+    }
+
+    #[test]
+    fn test_parse_func() {
+        assert!(parse_func("fn testfunc(arg1: i32, arg2: i32) { asd } ").is_ok());
+    }
+    
+    #[test]
+    fn test_parse_param() {
+        assert!(parse_param("a: bool").is_ok());
+        assert!(parse_param("input1: i32, input2: i32").is_ok());
+    }
+
+    #[test]
+    fn test_parse_if() {
+        assert!(parse_param(" if a == true {  let a: i32 =3 + 2 + 4;let a: i32 = 3 + 2 + 4;}").is_ok());
+        assert!(parse_param(" if a == true {}").is_ok());
+        assert!(parse_param(" if true {}").is_ok());
+    }
+
+    #[test]
+    fn test_parse_block() {
+        assert!(parse_param("{let a: i32 =3 + 2 + 4;let a: i32 = 3 + 2 + 4;}").is_ok());
+    }
+
+    #[test]
+    fn test_parse_while() {
+        assert!(parse_param("    while     true   { let a: i32 = 3 + 2 + 4;    }").is_ok());
+        assert!(parse_param("    while     a == 1   { let a: i32 = 3 + 2 + 4;    }").is_ok());
+    }
+
+    #[test]
+    fn test_parse_return() {
+        assert!(parse_param("   return     1 + 2+ 3   ;").is_ok());
+    }
 }
