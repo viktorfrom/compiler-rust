@@ -12,7 +12,7 @@ fn main() {
     // let string = "(((1) - 2) + 3)";
     // let string = "3 * 2";
     // let string = "let a: i32 = 3 + 2 + 4";
-    let string = "fn testfunc(arg1: i32, arg2: i32) {} ";
+    // let string = "fn testfunc(arg1: i32, arg2: i32) { sdfsdf} ";
     // let string = "a: bool";
     // let string = " if a == true {  let a: i32 =3 + 2 + 4;let a: i32 = 3 + 2 + 4;}";
     // let string = " if a == true {}";
@@ -22,7 +22,9 @@ fn main() {
     // let string = "i32";
     // let string = "{let a: i32 =3 + 2 + 4;let a: i32 = 3 + 2 + 4;}";
     // let string = "    -> i32";
-    let tree = parser::parse_func(string);
+    // let string = "    while     true   { let a: i32 = 3 + 2 + 4;    }";
+    let string = "    while     a == 1   { let a: i32 = 3 + 2 + 4;    }";
+    let tree = parser::parse_while(string);
     println!("{:#?}", tree);
 
     // let tree = parse_expr(string).unwrap().1;

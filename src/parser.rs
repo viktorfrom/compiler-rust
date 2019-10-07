@@ -2,7 +2,7 @@ extern crate nom;
 
 use nom::{
     branch::alt,
-    bytes::complete::{is_not, tag},
+    bytes::complete::tag,
     character::complete::{alphanumeric0, digit1, multispace0},
     combinator::map,
     multi::many0,
@@ -24,8 +24,7 @@ pub enum Expr {
     Tuple(Box<Expr>, Box<Expr>),
     If(Box<Expr>, Vec<Expr>),
     Func(Box<Expr>, Vec<Expr>, Vec<Expr>),
-    // UnOp(Op, Box<Tree>),
-    // Application(Id, vec<Tree>)
+    While(Box<Expr>, Box<Expr>, Vec<Expr>),
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -173,18 +172,18 @@ pub fn parse_if(input: &str) -> IResult<&str, Expr> {
         multispace0,
     )(input)?;
 
-    println!("expr = {:#?}, block = {:#?}", expr, block);
+    // println!("expr = {:#?}, block = {:#?}", expr, block);
 
     Ok((substring, Expr::If(Box::new(expr), block)))
 }
 pub fn parse_block(input: &str) -> IResult<&str, Vec<Expr>> {
     delimited(
-        tag("{"),
+        alt((tag("{"), multispace0)),
         many0(alt((
             terminated(parse_let, terminated(tag(";"), multispace0)),
             parse_return,
         ))),
-        tag("}"),
+        alt((tag("}"), multispace0)),
     )(input)
 }
 
@@ -206,15 +205,7 @@ pub fn parse_func(input: &str) -> IResult<&str, Expr> {
         multispace0,
     )(input)?;
 
-    // println!(
-    //     "arg = {:#?}, arg_type = {:#?}, block = {:#?}",
-    //     arg, var_type, expr
-    // );
-
-    Ok((
-        substring,
-        Expr::Func(Box::new(func_name), params, block),
-    ))
+    Ok((substring, Expr::Func(Box::new(func_name), params, block)))
 }
 
 pub fn parse_param(input: &str) -> IResult<&str, Vec<Expr>> {
@@ -229,6 +220,28 @@ pub fn parse_param(input: &str) -> IResult<&str, Vec<Expr>> {
         )),
         multispace0,
     )(input)
+}
+
+pub fn parse_while(input: &str) -> IResult<&str, Expr> {
+    let (substring, (var, var_type, block)) = delimited(
+        multispace0,
+        tuple((
+            parse_var,
+            alt((parse_bool, parse_expr)),
+            delimited(multispace0, parse_block, multispace0),
+        )),
+        multispace0,
+    )(input)?;
+
+    // println!(
+    //     "var = {:#?}, var_type = {:#?}, block = {:#?}",
+    //     var, var_type, block
+    // );
+
+    Ok((
+        substring,
+        Expr::While(Box::new(var), Box::new(var_type), block),
+    ))
 }
 
 pub fn parse_return(input: &str) -> IResult<&str, Expr> {
