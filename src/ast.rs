@@ -3,6 +3,11 @@ pub mod expr_tree {
     #[derive(Debug, PartialEq, Eq)]
     pub enum Expr {
         Node(Box<Expr>, Box<Expr>, Box<Expr>),
+        Tuple(Box<Expr>, Box<Expr>),
+        If(Box<Expr>, Vec<Expr>),
+        Func(Box<Expr>, Vec<Expr>, Vec<Expr>),
+        While(Box<Expr>, Box<Expr>, Vec<Expr>),
+        Return(String, Box<Expr>),
         Num(i32),
         Bool(bool),
         LogicOp(LogicOp),
@@ -11,10 +16,6 @@ pub mod expr_tree {
         RelOp(RelOp),
         Type(Type),
         Str(String),
-        Tuple(Box<Expr>, Box<Expr>),
-        If(Box<Expr>, Vec<Expr>),
-        Func(Box<Expr>, Vec<Expr>, Vec<Expr>),
-        While(Box<Expr>, Box<Expr>, Vec<Expr>),
     }
 
     #[derive(Debug, PartialEq, Eq)]
