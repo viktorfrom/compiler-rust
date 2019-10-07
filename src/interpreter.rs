@@ -1,6 +1,4 @@
-use crate::parser::ArithOp;
-use crate::parser::Expr;
-use crate::parser::LogicOp;
+use crate::ast::expr_tree::*;
 
 #[derive(Debug)]
 pub enum Content {

@@ -1,5 +1,7 @@
 extern crate nom;
 
+use crate::ast::expr_tree::*;
+
 use nom::{
     branch::alt,
     bytes::complete::tag,
@@ -9,63 +11,6 @@ use nom::{
     sequence::{delimited, preceded, terminated, tuple},
     IResult,
 };
-
-#[derive(Debug, PartialEq, Eq)]
-pub enum Expr {
-    Node(Box<Expr>, Box<Expr>, Box<Expr>),
-    Num(i32),
-    Bool(bool),
-    LogicOp(LogicOp),
-    ArithOp(ArithOp),
-    AssignOp(AssignOp),
-    RelOp(RelOp),
-    Type(Type),
-    Str(String),
-    Tuple(Box<Expr>, Box<Expr>),
-    If(Box<Expr>, Vec<Expr>),
-    Func(Box<Expr>, Vec<Expr>, Vec<Expr>),
-    While(Box<Expr>, Box<Expr>, Vec<Expr>),
-}
-
-#[derive(Debug, PartialEq, Eq)]
-pub enum ArithOp {
-    Add,
-    Sub,
-    Mult,
-    Div,
-}
-
-#[derive(Debug, PartialEq, Eq)]
-pub enum LogicOp {
-    And,
-    Or,
-    Not,
-}
-
-#[derive(Debug, PartialEq, Eq)]
-pub enum AssignOp {
-    Equ,
-    PluEqu,
-    MinEqu,
-    DivEqu,
-}
-
-#[derive(Debug, PartialEq, Eq)]
-pub enum RelOp {
-    EquEqu,
-    NotEqu,
-    LesEqu,
-    GreEqu,
-    Les,
-    Gre,
-}
-
-#[derive(Debug, PartialEq, Eq)]
-pub enum Type {
-    Integer,
-    Bool,
-    Str,
-}
 
 fn parse_ari_op(input: &str) -> IResult<&str, Expr> {
     delimited(
@@ -176,6 +121,7 @@ pub fn parse_if(input: &str) -> IResult<&str, Expr> {
 
     Ok((substring, Expr::If(Box::new(expr), block)))
 }
+
 pub fn parse_block(input: &str) -> IResult<&str, Vec<Expr>> {
     delimited(
         alt((tag("{"), multispace0)),
@@ -246,9 +192,9 @@ pub fn parse_while(input: &str) -> IResult<&str, Expr> {
 
 pub fn parse_return(input: &str) -> IResult<&str, Expr> {
     let (substring, return_type) = delimited(
-        delimited(multispace0, tag("->"), multispace0),
-        parse_type,
-        multispace0,
+        delimited(multispace0, tag("return"), multispace0),
+        parse_var,
+        delimited(multispace0, tag(";"), multispace0),
     )(input)?;
 
     Ok((substring, return_type))

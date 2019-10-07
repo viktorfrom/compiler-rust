@@ -1,8 +1,6 @@
+mod ast;
 mod interpreter;
 mod parser;
-
-use crate::interpreter::interp_expr;
-use crate::parser::parse_expr;
 
 fn main() {
     // let string = "        11 + 2 -1 / (5     *      3)                 ;";
@@ -23,8 +21,9 @@ fn main() {
     // let string = "{let a: i32 =3 + 2 + 4;let a: i32 = 3 + 2 + 4;}";
     // let string = "    -> i32";
     // let string = "    while     true   { let a: i32 = 3 + 2 + 4;    }";
-    let string = "    while     a == 1   { let a: i32 = 3 + 2 + 4;    }";
-    let tree = parser::parse_while(string);
+    // let string = "    while     a == 1   { let a: i32 = 3 + 2 + 4;    }";
+    let string = "   return     a   ;";
+    let tree = parser::parse_return(string);
     println!("{:#?}", tree);
 
     // let tree = parse_expr(string).unwrap().1;
