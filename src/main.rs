@@ -12,17 +12,17 @@ fn main() {
     // let string = "(((1) - 2) + 3)";
     // let string = "3 * 2";
     // let string = "let a: i32 = 3 + 2 + 4";
-    // let string = "fn testfunc(arg1: i32) {} ";
+    let string = "fn testfunc(arg1: i32, arg2: i32) {} ";
     // let string = "a: bool";
     // let string = " if a == true {  let a: i32 =3 + 2 + 4;let a: i32 = 3 + 2 + 4;}";
     // let string = " if a == true {}";
     // let string = " if true {}";
     // let string = "a == 1";
-    // let string = "input: i32";
-    let string = "i32";
+    // let string = "input1: i32, input2: i32";
+    // let string = "i32";
     // let string = "{let a: i32 =3 + 2 + 4;let a: i32 = 3 + 2 + 4;}";
     // let string = "    -> i32";
-    let tree = parser::parse_type(string);
+    let tree = parser::parse_func(string);
     println!("{:#?}", tree);
 
     // let tree = parse_expr(string).unwrap().1;

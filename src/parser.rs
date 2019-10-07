@@ -140,7 +140,7 @@ fn parse_paren(input: &str) -> IResult<&str, Expr> {
     )(input)
 }
 
-fn parse_i32(input: &str) -> IResult<&str, Expr> {
+pub fn parse_i32(input: &str) -> IResult<&str, Expr> {
     let (substring, digit) = delimited(multispace0, digit1, multispace0)(input)?;
 
     Ok((substring, Expr::Num(digit.parse::<i32>().unwrap())))
@@ -169,7 +169,7 @@ fn parse_var(input: &str) -> IResult<&str, Expr> {
 pub fn parse_if(input: &str) -> IResult<&str, Expr> {
     let (substring, (expr, block)) = delimited(
         delimited(multispace0, tag("if"), multispace0),
-        tuple((parse_expr, delimited(tag("{"), parse_block, tag("}")))),
+        tuple((parse_expr, delimited(multispace0, parse_block, multispace0))),
         multispace0,
     )(input)?;
 
@@ -179,17 +179,17 @@ pub fn parse_if(input: &str) -> IResult<&str, Expr> {
 }
 pub fn parse_block(input: &str) -> IResult<&str, Vec<Expr>> {
     delimited(
-        multispace0,
+        tag("{"),
         many0(alt((
             terminated(parse_let, terminated(tag(";"), multispace0)),
             parse_return,
         ))),
-        multispace0,
+        tag("}"),
     )(input)
 }
 
 pub fn parse_func(input: &str) -> IResult<&str, Expr> {
-    let (substring, (arg, var_type, expr)) = delimited(
+    let (substring, (func_name, params, block)) = delimited(
         delimited(
             multispace0,
             alt((
@@ -200,28 +200,31 @@ pub fn parse_func(input: &str) -> IResult<&str, Expr> {
         ),
         tuple((
             parse_var,
-            // delimited(tag("("), parse_var, tag(":")),
-            // preceded(parse_type, tag(",")),
-            multispace0,
-            multispace0,
+            delimited(tag("("), parse_param, tag(")")),
+            delimited(multispace0, parse_block, multispace0),
         )),
         multispace0,
     )(input)?;
 
-    println!(
-        "arg = {:#?}, type = {:#?}, expr = {:#?}",
-        arg, var_type, expr
-    );
+    // println!(
+    //     "arg = {:#?}, arg_type = {:#?}, block = {:#?}",
+    //     arg, var_type, expr
+    // );
 
-    Ok((substring, Expr::Num(1)))
-    // Ok((substring, Expr::Node(Box::new(var), Box::new(var_type), Box::new(expr))))
+    Ok((
+        substring,
+        Expr::Func(Box::new(func_name), params, block),
+    ))
 }
 
 pub fn parse_param(input: &str) -> IResult<&str, Vec<Expr>> {
     delimited(
         multispace0,
         many0(map(
-            tuple((terminated(parse_var, tag(":")), parse_type)),
+            tuple((
+                terminated(parse_var, tag(":")),
+                terminated(parse_type, alt((tag(","), multispace0))),
+            )),
             |(arg, arg_type)| Expr::Tuple(Box::new(arg), Box::new(arg_type)),
         )),
         multispace0,
@@ -286,5 +289,15 @@ mod parse_tests {
         assert_eq!(parse_type("i32"), Ok(("", Expr::Type(Type::Integer))));
         assert_eq!(parse_type("bool"), Ok(("", Expr::Type(Type::Bool))));
         assert_eq!(parse_type("String"), Ok(("", Expr::Type(Type::Str))));
+    }
+
+    // #[test]
+    // fn test_parse_if() {
+    //     assert_eq!(parse_type("if a == true {  let a: i32 =3 + 2 + 4;let a: i32 = 3 + 2 + 4;}"), Ok(("", Expr::Type(Type::Bool))));
+    // }
+
+    #[test]
+    fn test_parse_i32() {
+        assert_eq!(parse_i32("1"), Ok(("", Expr::Num(1))));
     }
 }
