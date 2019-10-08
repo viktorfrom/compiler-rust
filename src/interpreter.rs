@@ -1,23 +1,33 @@
 use crate::ast::expr_tree::*;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Content {
     Num(i32),
     ContentOp(ContentOp),
     Bool(bool),
 }
-
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum ContentOp {
     Add,
     Sub,
     Mult,
     Div,
+
     And,
     Or,
+    Not,
+
+    Equ,
+    PluEqu,
+    SubEqu,
+    DivEqu,
+
+    EquEqu,
+    NotEqu,
+    LesEqu,
+    GreEqu,
     Les,
     Gre,
-    Not,
 }
 
 pub fn interp_expr(input: Expr) -> Content {
@@ -38,7 +48,28 @@ pub fn interp_expr(input: Expr) -> Content {
             LogicOp::Not => Content::ContentOp(ContentOp::Not),
         },
 
-        Expr::Node(left, operator, right) => bool_eval(
+        Expr::AssignOp(op) => match op {
+            AssignOp::Equ => Content::ContentOp(ContentOp::Equ),
+            AssignOp::PluEqu => Content::ContentOp(ContentOp::PluEqu),
+            AssignOp::SubEqu => Content::ContentOp(ContentOp::SubEqu),
+            AssignOp::DivEqu => Content::ContentOp(ContentOp::DivEqu),
+        },
+
+        Expr::RelOp(op) => match op {
+            RelOp::EquEqu => Content::ContentOp(ContentOp::EquEqu),
+            RelOp::NotEqu => Content::ContentOp(ContentOp::NotEqu),
+            RelOp::LesEqu => Content::ContentOp(ContentOp::LesEqu),
+            RelOp::GreEqu => Content::ContentOp(ContentOp::GreEqu),
+            RelOp::Les => Content::ContentOp(ContentOp::Les),
+            RelOp::Gre => Content::ContentOp(ContentOp::Gre),
+        },
+
+        // Expr::Node(left, operator, right) => eval_i32(
+        //     interp_expr(*left),
+        //     interp_expr(*operator),
+        //     interp_expr(*right),
+        // ),
+        Expr::Node(left, operator, right) => eval_bool(
             interp_expr(*left),
             interp_expr(*operator),
             interp_expr(*right),
@@ -46,47 +77,63 @@ pub fn interp_expr(input: Expr) -> Content {
         _ => (panic!("Invalid input!")),
     }
 }
-
-fn bool_eval(left: Content, operator: Content, right: Content) -> Content {
-    let l: bool;
-    let r: bool;
-
-    match left {
-        Content::Bool(b) => l = b,
-        _ => panic!("Invalid input! Left leaf not of type bool!"),
-    }
-
-    match right {
-        Content::Bool(b) => r = b,
-        _ => panic!("Invalid input! Right leaf not of type bool!"),
-    }
-
-    match operator {
-        Content::ContentOp(ContentOp::And) => Content::Bool(l && r),
-        Content::ContentOp(ContentOp::Or) => Content::Bool(l || r),
-        _ => panic!("Invalid input! Operator not of logic type!"),
+fn eval_bool(left: Content, operator: Content, right: Content) -> Content {
+    match (left, operator, right) {
+        (Content::Bool(left), Content::ContentOp(ContentOp::And), Content::Bool(right)) => {
+            Content::Bool(left && right)
+        }
+        (Content::Bool(left), Content::ContentOp(ContentOp::Or), Content::Bool(right)) => {
+            Content::Bool(left || right)
+        }
+        _ => panic!("Invalid input!"),
     }
 }
 
-fn i32_eval(left: Content, operator: Content, right: Content) -> Content {
-    let l: i32;
-    let r: i32;
+fn eval_i32(left: Content, operator: Content, right: Content) -> Content {
+    match (left, operator, right) {
+        (Content::Num(left), Content::ContentOp(ContentOp::Add), Content::Num(right)) => {
+            Content::Num(left + right)
+        }
+        (Content::Num(left), Content::ContentOp(ContentOp::Sub), Content::Num(right)) => {
+            Content::Num(left - right)
+        }
+        (Content::Num(left), Content::ContentOp(ContentOp::Div), Content::Num(right)) => {
+            Content::Num(left / right)
+        }
+        (Content::Num(left), Content::ContentOp(ContentOp::Mult), Content::Num(right)) => {
+            Content::Num(left * right)
+        }
+        _ => panic!("Invalid input!"),
+    }
+}
 
-    match left {
-        Content::Num(num) => l = num,
-        _ => panic!("Invalid input! Left leaf NaN!"),
+#[cfg(test)]
+mod interp_tests {
+    use super::*;
+
+    #[test]
+    fn test_interp() {
+        assert_eq!(interp_expr(Expr::Num(1)), Content::Num(1));
+        assert_eq!(interp_expr(Expr::Bool(true)), Content::Bool(true));
     }
 
-    match right {
-        Content::Num(num) => r = num,
-        _ => panic!("Invalid input! Right leaf NaN!"),
-    }
-
-    match operator {
-        Content::ContentOp(ContentOp::Add) => Content::Num(l + r),
-        Content::ContentOp(ContentOp::Sub) => Content::Num(l - r),
-        Content::ContentOp(ContentOp::Mult) => Content::Num(l * r),
-        Content::ContentOp(ContentOp::Div) => Content::Num(l / r),
-        _ => panic!("Invalid input! Operator not of arithmetic type!"),
+    #[test]
+    fn test_interp_node() {
+        // assert_eq!(
+        //     interp_expr(Expr::Node(
+        //         Box::new(Expr::Num(2)),
+        //         Box::new(Expr::ArithOp(ArithOp::Mult)),
+        //         Box::new(Expr::Num(3))
+        //     )),
+        //     Content::Num(6)
+        // );
+        assert_eq!(
+            interp_expr(Expr::Node(
+                Box::new(Expr::Bool(true)),
+                Box::new(Expr::LogicOp(LogicOp::And)),
+                Box::new(Expr::Bool(false))
+            )),
+            Content::Bool(false)
+        );
     }
 }

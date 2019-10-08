@@ -58,7 +58,7 @@ fn parse_assign_op(input: &str) -> IResult<&str, Expr> {
         alt((
             map(tag("="), |_| Expr::AssignOp(AssignOp::Equ)),
             map(tag("+="), |_| Expr::AssignOp(AssignOp::PluEqu)),
-            map(tag("-="), |_| Expr::AssignOp(AssignOp::MinEqu)),
+            map(tag("-="), |_| Expr::AssignOp(AssignOp::SubEqu)),
             map(tag("/="), |_| Expr::AssignOp(AssignOp::DivEqu)),
         )),
         multispace0,
@@ -74,7 +74,7 @@ fn parse_rel_op(input: &str) -> IResult<&str, Expr> {
             map(tag("<="), |_| Expr::RelOp(RelOp::LesEqu)),
             map(tag(">="), |_| Expr::RelOp(RelOp::GreEqu)),
             map(tag("<"), |_| Expr::RelOp(RelOp::Les)),
-            map(tag(">="), |_| Expr::RelOp(RelOp::Gre)),
+            map(tag(">"), |_| Expr::RelOp(RelOp::Gre)),
         )),
         multispace0,
     )(input)
@@ -144,7 +144,7 @@ pub fn parse_param(input: &str) -> IResult<&str, Vec<Expr>> {
                 terminated(parse_var, tag(":")),
                 terminated(parse_type, alt((tag(","), multispace0))),
             )),
-            |(arg, arg_type)| Expr::Tuple(Box::new(arg), Box::new(arg_type)),
+            |(arg, arg_type)| Expr::Param(Box::new(arg), Box::new(arg_type)),
         )),
         multispace0,
     )(input)
@@ -289,7 +289,7 @@ mod parse_tests {
     fn test_parse_func() {
         assert!(parse_func("fn testfunc(arg1: i32, arg2: i32) { asd } ").is_ok());
     }
-    
+
     #[test]
     fn test_parse_param() {
         assert!(parse_param("a: bool").is_ok());
@@ -298,7 +298,9 @@ mod parse_tests {
 
     #[test]
     fn test_parse_if() {
-        assert!(parse_param(" if a == true {  let a: i32 =3 + 2 + 4;let a: i32 = 3 + 2 + 4;}").is_ok());
+        assert!(
+            parse_param(" if a == true {  let a: i32 =3 + 2 + 4;let a: i32 = 3 + 2 + 4;}").is_ok()
+        );
         assert!(parse_param(" if a == true {}").is_ok());
         assert!(parse_param(" if true {}").is_ok());
     }

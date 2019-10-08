@@ -3,7 +3,7 @@ pub mod expr_tree {
     #[derive(Debug, PartialEq, Eq)]
     pub enum Expr {
         Node(Box<Expr>, Box<Expr>, Box<Expr>),
-        Tuple(Box<Expr>, Box<Expr>),
+        Param(Box<Expr>, Box<Expr>),
         If(Box<Expr>, Vec<Expr>),
         Func(Box<Expr>, Vec<Expr>, Vec<Expr>),
         While(Box<Expr>, Box<Expr>, Vec<Expr>),
@@ -37,7 +37,7 @@ pub mod expr_tree {
     pub enum AssignOp {
         Equ,
         PluEqu,
-        MinEqu,
+        SubEqu,
         DivEqu,
     }
 
