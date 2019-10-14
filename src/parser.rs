@@ -88,7 +88,7 @@ fn parse_var(input: &str) -> IResult<&str, Expr> {
     )(input)
 }
 
-pub fn parse_i32(input: &str) -> IResult<&str, Expr> {
+fn parse_i32(input: &str) -> IResult<&str, Expr> {
     let (substring, digit) = delimited(multispace0, digit1, multispace0)(input)?;
 
     Ok((substring, Expr::Num(digit.parse::<i32>().unwrap())))
@@ -105,7 +105,7 @@ fn parse_bool(input: &str) -> IResult<&str, Expr> {
     )(input)
 }
 
-pub fn parse_type(input: &str) -> IResult<&str, Expr> {
+fn parse_type(input: &str) -> IResult<&str, Expr> {
     delimited(
         multispace0,
         alt((
@@ -125,7 +125,7 @@ fn parse_paren(input: &str) -> IResult<&str, Expr> {
     )(input)
 }
 
-pub fn parse_block(input: &str) -> IResult<&str, Vec<Expr>> {
+fn parse_block(input: &str) -> IResult<&str, Vec<Expr>> {
     delimited(
         alt((tag("{"), multispace0)),
         many0(terminated(
@@ -136,7 +136,7 @@ pub fn parse_block(input: &str) -> IResult<&str, Vec<Expr>> {
     )(input)
 }
 
-pub fn parse_param(input: &str) -> IResult<&str, Vec<Expr>> {
+fn parse_param(input: &str) -> IResult<&str, Vec<Expr>> {
     delimited(
         multispace0,
         many0(map(
@@ -150,7 +150,7 @@ pub fn parse_param(input: &str) -> IResult<&str, Vec<Expr>> {
     )(input)
 }
 
-pub fn parse_return(input: &str) -> IResult<&str, Expr> {
+fn parse_return(input: &str) -> IResult<&str, Expr> {
     let (substring, (return_param, var)) = delimited(
         multispace0,
         tuple((tag("return"), parse_right_expr)),
@@ -163,7 +163,7 @@ pub fn parse_return(input: &str) -> IResult<&str, Expr> {
     ))
 }
 
-pub fn parse_if(input: &str) -> IResult<&str, Expr> {
+fn parse_if(input: &str) -> IResult<&str, Expr> {
     let (substring, (expr, block)) = delimited(
         delimited(multispace0, tag("if"), multispace0),
         tuple((
@@ -178,7 +178,7 @@ pub fn parse_if(input: &str) -> IResult<&str, Expr> {
     Ok((substring, Expr::If(Box::new(expr), block)))
 }
 
-pub fn parse_while(input: &str) -> IResult<&str, Expr> {
+fn parse_while(input: &str) -> IResult<&str, Expr> {
     let (substring, (var, var_type, block)) = delimited(
         multispace0,
         tuple((
@@ -195,7 +195,7 @@ pub fn parse_while(input: &str) -> IResult<&str, Expr> {
     ))
 }
 
-pub fn parse_let(input: &str) -> IResult<&str, Expr> {
+fn parse_let(input: &str) -> IResult<&str, Expr> {
     let (substring, (var, var_type, expr)) = delimited(
         delimited(multispace0, tag("let"), multispace0),
         tuple((
@@ -212,7 +212,7 @@ pub fn parse_let(input: &str) -> IResult<&str, Expr> {
     ))
 }
 
-pub fn parse_func(input: &str) -> IResult<&str, Expr> {
+fn parse_func(input: &str) -> IResult<&str, Expr> {
     let (substring, (func_name, params, block)) = delimited(
         delimited(
             multispace0,
@@ -233,7 +233,7 @@ pub fn parse_func(input: &str) -> IResult<&str, Expr> {
     Ok((substring, Expr::Func(Box::new(func_name), params, block)))
 }
 
-pub fn parse_right_expr(input: &str) -> IResult<&str, Expr> {
+fn parse_right_expr(input: &str) -> IResult<&str, Expr> {
     delimited(
         multispace0,
         alt((
