@@ -43,22 +43,22 @@ pub enum ContentOp {
     Str,
 }
 
-// pub fn interp_tree(input: Expr) -> Content {
-//     let expr = interp_expr(input);
+pub fn interp_tree(input: Expr) -> Content {
+    let expr = interp_expr(input);
 
-//     match expr {
-//         Content::Tuple(String, i32) => {
-//             let key = Content::Tuple(String, i32).1;
-//         }
-//         _ => panic!("Invalid input!")
-//     }
+    match expr {
+        Content::Tuple(String, i32) => {
+            let key = Content::Tuple(String, i32).1;
+        }
+        _ => panic!("Invalid input!")
+    }
 
-//     // let hashmap = Hashmap::new();
-//     // hashmap.insert(key.to_string(), value);
-//     // println!("{:#?}", hashmap);
+    // let hashmap = Hashmap::new();
+    // hashmap.insert(key.to_string(), value);
+    // println!("{:#?}", hashmap);
 
-//     return expr; 
-// }
+    return expr; 
+}
 
 pub fn interp_expr(input: Expr) -> Content {
     match input {
