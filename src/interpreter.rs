@@ -43,22 +43,34 @@ pub enum ContentOp {
     Str,
 }
 
-pub fn interp_tree(input: Expr) -> Content {
-    let expr = interp_expr(input);
+// pub fn interp_tree(input: Expr) {
+//     let expr = interp_expr(input);
+//     println!("expr = {:#?}", expr);
 
-    match expr {
-        Content::Tuple(String, i32) => {
-            let key = Content::Tuple(String, i32).1;
-        }
-        _ => panic!("Invalid input!")
-    }
+//     let (key, value) = match expr {
+//         Content::Tuple(left, right) => {
+//             (left, right)
+//         }
+//         _ => (panic!("Invalid input!")),
+//     };
 
-    // let hashmap = Hashmap::new();
-    // hashmap.insert(key.to_string(), value);
-    // println!("{:#?}", hashmap);
+//     let mut hashmap = Hashmap::new();
 
-    return expr; 
-}
+//     match interp_expr(input) {
+//         Content::Num(i) => {
+//              Content::Num(i);
+//         }
+//         Content::Tuple(left, right) => {
+//             let mut hashmap = Hashmap::new();
+//             hashmap.insert(left.to_string(), Expr::Num(right));
+//         }
+//         _ => (panic!("Invalid input!")),
+//     };
+
+//     println!("key = {:#?}, value = {:#?}", key, value);
+
+//     let hashmap: HashMap = HashMap::new();
+// }
 
 pub fn interp_expr(input: Expr) -> Content {
     match input {
@@ -101,6 +113,14 @@ pub fn interp_expr(input: Expr) -> Content {
             Type::Str => Content::ContentOp(ContentOp::Str),
         },
 
+        Expr::Return(return_param, var) => match *return_param {
+            _ => interp_expr(*var),
+        }, 
+
+        Expr::While(while_param, var, block) => match *while_param {
+            _ => interp_expr(*var),
+        }, 
+        
         Expr::Node(left, operator, right) => match *left {
             Expr::Num(left) => eval_i32(
                 interp_expr(Expr::Num(left)),
@@ -119,7 +139,7 @@ pub fn interp_expr(input: Expr) -> Content {
             ),
             _ => (panic!("Invalid input!")),
         },
-        _ => (panic!("Invalid expr!")),
+        _ => (panic!("Invalid asdasd expr!")),
     }
 }
 
