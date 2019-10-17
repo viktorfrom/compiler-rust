@@ -250,6 +250,7 @@ fn parse_right_expr(input: &str) -> IResult<&str, Expr> {
             parse_bool,
             parse_i32,
             parse_paren,
+            parse_var,
         )),
         multispace0,
     )(input)
