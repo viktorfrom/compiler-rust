@@ -201,7 +201,7 @@ fn parse_let(input: &str) -> IResult<&str, Expr> {
         tuple((
             parse_var,
             preceded(tag(":"), parse_type),
-            preceded(parse_assign_op, parse_right_expr),
+            preceded(parse_assign_op, alt((parse_right_expr, parse_var))),
         )),
         multispace0,
     )(input)?;
@@ -250,7 +250,6 @@ fn parse_right_expr(input: &str) -> IResult<&str, Expr> {
             parse_bool,
             parse_i32,
             parse_paren,
-            parse_var,
         )),
         multispace0,
     )(input)
@@ -284,6 +283,7 @@ mod parse_tests {
     #[test]
     fn test_parse_let() {
         assert!(parse_let("let a: i32 = 3 + 2 + 4").is_ok());
+        assert!(parse_let("let a: i32 = b").is_ok());
     }
 
     #[test]

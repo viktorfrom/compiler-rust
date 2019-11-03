@@ -1,6 +1,6 @@
 pub mod expr_tree {
 
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, PartialEq, Eq, Clone)]
     pub enum Expr {
         Node(Box<Expr>, Box<Expr>, Box<Expr>),
         Param(Box<Expr>, Box<Expr>),
@@ -18,7 +18,7 @@ pub mod expr_tree {
         Str(String),
     }
 
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, PartialEq, Eq, Clone)]
     pub enum ArithOp {
         Add,
         Sub,
@@ -26,14 +26,14 @@ pub mod expr_tree {
         Div,
     }
 
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, PartialEq, Eq, Clone)]
     pub enum LogicOp {
         And,
         Or,
         Not,
     }
 
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, PartialEq, Eq, Clone)]
     pub enum AssignOp {
         Equ,
         PluEqu,
@@ -41,7 +41,7 @@ pub mod expr_tree {
         DivEqu,
     }
 
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, PartialEq, Eq, Clone)]
     pub enum RelOp {
         EquEqu,
         NotEqu,
@@ -51,8 +51,49 @@ pub mod expr_tree {
         Gre,
     }
 
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, PartialEq, Eq, Clone)]
     pub enum Type {
+        Integer,
+        Bool,
+        Str,
+    }
+}
+
+pub mod content_tree {
+
+    #[derive(Debug, PartialEq, Eq, Clone)]
+    pub enum Content {
+        Num(i32),
+        ContentOp(ContentOp),
+        Bool(bool),
+        Str(String),
+        Tuple(String, Box<Content>),
+        Null,
+    }
+
+    #[derive(Debug, PartialEq, Eq, Clone)]
+    pub enum ContentOp {
+        Add,
+        Sub,
+        Mult,
+        Div,
+
+        And,
+        Or,
+        Not,
+
+        Equ,
+        PluEqu,
+        SubEqu,
+        DivEqu,
+
+        EquEqu,
+        NotEqu,
+        LesEqu,
+        GreEqu,
+        Les,
+        Gre,
+
         Integer,
         Bool,
         Str,

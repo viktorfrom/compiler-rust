@@ -1,76 +1,6 @@
-use crate::ast::expr_tree::{
-    Expr::{Bool, Num, Str},
-    *,
-};
-use std::collections::HashMap;
-
-pub type Hashmap = HashMap<String, Expr>;
-
-#[derive(Debug, PartialEq, Eq)]
-pub enum Content {
-    Num(i32),
-    ContentOp(ContentOp),
-    Bool(bool),
-    Str(String),
-    Tuple(String, i32),
-}
-
-#[derive(Debug, PartialEq, Eq)]
-pub enum ContentOp {
-    Add,
-    Sub,
-    Mult,
-    Div,
-
-    And,
-    Or,
-    Not,
-
-    Equ,
-    PluEqu,
-    SubEqu,
-    DivEqu,
-
-    EquEqu,
-    NotEqu,
-    LesEqu,
-    GreEqu,
-    Les,
-    Gre,
-
-    Integer,
-    Bool,
-    Str,
-}
-
-// pub fn interp_tree(input: Expr) {
-//     let expr = interp_expr(input);
-//     println!("expr = {:#?}", expr);
-
-//     let (key, value) = match expr {
-//         Content::Tuple(left, right) => {
-//             (left, right)
-//         }
-//         _ => (panic!("Invalid input!")),
-//     };
-
-//     let mut hashmap = Hashmap::new();
-
-//     match interp_expr(input) {
-//         Content::Num(i) => {
-//              Content::Num(i);
-//         }
-//         Content::Tuple(left, right) => {
-//             let mut hashmap = Hashmap::new();
-//             hashmap.insert(left.to_string(), Expr::Num(right));
-//         }
-//         _ => (panic!("Invalid input!")),
-//     };
-
-//     println!("key = {:#?}, value = {:#?}", key, value);
-
-//     let hashmap: HashMap = HashMap::new();
-// }
+use crate::ast::content_tree::*;
+use crate::ast::expr_tree::*;
+use crate::content;
 
 pub fn interp_expr(input: Expr) -> Content {
     match input {
@@ -115,12 +45,11 @@ pub fn interp_expr(input: Expr) -> Content {
 
         Expr::Return(return_param, var) => match *return_param {
             _ => interp_expr(*var),
-        }, 
+        },
 
-        Expr::While(while_param, var, block) => match *while_param {
-            _ => interp_expr(*var),
-        }, 
-        
+        // Expr::While(while_param, var, _block) => eval_while(interp_expr(*var), block),
+        Expr::If(if_param, block) => eval_if(interp_expr(*if_param), block),
+
         Expr::Node(left, operator, right) => match *left {
             Expr::Num(left) => eval_i32(
                 interp_expr(Expr::Num(left)),
@@ -139,8 +68,44 @@ pub fn interp_expr(input: Expr) -> Content {
             ),
             _ => (panic!("Invalid input!")),
         },
-        _ => (panic!("Invalid asdasd expr!")),
+        _ => (panic!("Invalid input!")),
     }
+}
+
+fn eval_if(if_param: Content, block: Vec<Expr>) -> Content {
+    match if_param {
+        Content::Bool(true) => eval_block(block),
+        Content::Bool(false) => Content::Null,
+        _ => (panic!("Invalid input!")),
+    }
+}
+
+fn eval_block(block: Vec<Expr>) -> Content {
+    use std::collections::HashMap;
+    pub type Scope<T> = HashMap<String, T>;
+    let mut scope: Scope<Content> = HashMap::new();
+    // let mut result: Content = Content::Null;
+
+    for expr in block.iter() {
+        let result = interp_expr(expr.clone());
+        println!("block_item = {:#?}", result);
+
+        let (key, value) = match result {
+            Content::Tuple(left, right) => (left, *right),
+            _ => continue,
+        };
+        // println!("key = {}, value = {:#?}", key, value);
+        scope.insert(key, value);
+        let val = scope.entry("a".to_string());
+        // println!("val!!! {:#?}", val);
+    }
+
+    for (key, value) in &scope {
+        println!("test!!! {}: \"{:#?}\"", key, value);
+    }
+    let val = scope.entry("a".to_string());
+    println!("val!!! {:#?}", val);
+    return Content::Num(1);
 }
 
 fn eval_i32(left: Content, operator: Content, right: Content) -> Content {
@@ -175,8 +140,8 @@ fn eval_bool(left: Content, operator: Content, right: Content) -> Content {
 
 fn eval_let(left: Content, operator: Content, right: Content) -> Content {
     match (left, operator, right) {
-        (Content::Str(left), Content::ContentOp(ContentOp::Integer), Content::Num(right)) => {
-            Content::Tuple(left, right)
+        (Content::Str(left), Content::ContentOp(ContentOp::Integer), right) => {
+            Content::Tuple(left, Box::new(right))
         }
         _ => panic!("Invalid input!"),
     }
