@@ -60,6 +60,7 @@ pub mod expr_tree {
 }
 
 pub mod content_tree {
+    // use std::fmt;
 
     #[derive(Debug, PartialEq, Eq, Clone)]
     pub enum Content {
@@ -68,6 +69,7 @@ pub mod content_tree {
         Bool(bool),
         Str(String),
         Tuple(String, Box<Content>),
+        Return(String, Box<Content>),
         Null,
     }
 
@@ -98,4 +100,13 @@ pub mod content_tree {
         Bool,
         Str,
     }
+
+    // impl fmt::Display for Content {
+    //     fn fmt(&self, f: &mut fmt::Formatter)  -> fmt::Result {
+    //         match self {
+    //             Content::Num(value) => write!(f, "{:#?}"),
+
+    //         }
+    //     }
+    // }
 }
