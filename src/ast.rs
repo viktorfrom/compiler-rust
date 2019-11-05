@@ -62,18 +62,18 @@ pub mod expr_tree {
 pub mod content_tree {
     // use std::fmt;
 
-    #[derive(Debug, PartialEq, Eq, Clone)]
+    #[derive(Debug, PartialEq, Eq, Clone, Hash)]
     pub enum Content {
         Num(i32),
         ContentOp(ContentOp),
         Bool(bool),
         Str(String),
-        Tuple(String, Box<Content>),
+        // Tuple(String, Box<Content>),
         Return(String, Box<Content>),
         Null,
     }
 
-    #[derive(Debug, PartialEq, Eq, Clone)]
+    #[derive(Debug, PartialEq, Eq, Clone, Hash)]
     pub enum ContentOp {
         Add,
         Sub,
@@ -104,7 +104,7 @@ pub mod content_tree {
     // impl fmt::Display for Content {
     //     fn fmt(&self, f: &mut fmt::Formatter)  -> fmt::Result {
     //         match self {
-    //             Content::Num(value) => write!(f, "{:#?}"),
+    //             Content::Str(value) => write!(f, "{}", value),
 
     //         }
     //     }

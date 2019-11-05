@@ -64,7 +64,10 @@ pub fn eval_expr(input: Expr) -> Content {
             Type::Str => Content::ContentOp(ContentOp::Str),
         },
 
-        Expr::Return(_return_param, var) => eval_return(eval_expr(*var)),
+        Expr::Return(_return_param, var) => match *var {
+            Expr::Str(var) => eval_return(&var.to_string()),
+            _ => panic!("asdasd"),
+            }
 
         // Expr::While(while_param, var, block) => eval_if(eval_expr(*var), block),
         Expr::If(if_param, block) => eval_if(eval_expr(*if_param), block),
@@ -110,62 +113,50 @@ fn assign_var(name: Content, val: Content) -> Content {
         }
         _ => panic!("ERROR: Can't assign to var"),
     }
-    println!("test = {:#?}", MEMORY.lock().unwrap());
-    Content::Null
+    println!("hashmap = {:#?}", MEMORY.lock().unwrap());
+    return Content::Str("hej".to_string());
 }
 
-fn eval_return(var: Content) -> Content {
+fn eval_return(var: &str) -> Content {
+        // let scope = SCOPE.lock().unwrap();
+        // println!("blop = {:#?}", scope);
+        // match scope.last(){
+            // Some(m) => {
+                let map = MEMORY.lock().unwrap();
 
-    match var {
-        Content::Str(n) => {
-
-            let map = MEMORY.lock().unwrap();
-            map.get(Box::leak(n.into_boxed_str()));
-                    
-        }
-        _ => panic!("ERROR: Can't assign to var"),
-    }
-    println!("test = {:#?}", MEMORY.lock().unwrap());
-    Content::Null
-}
+                // println!("{:#?}", map);
+                match map.get(&var) {
+                    Some(var) => match var {
+                        Content::Num(num) => Content::Num(*num),
+                        Content::Bool(b) => Content::Bool(*b),
+                        // IntRep::Undefined(t) => IntRep::Undefined(*t),
+                        Content::Str(n) => Content::Str(n.to_string()),
+                        // IntRep::Const(val) => IntRep::Const((*val).clone()),
+                        // IntRep::TypeError(e) => IntRep::TypeError(e.to_string()),
+                        _ => panic!("hej"),
+                    },
+                    None => {
+                        panic!("ERROR: Var not found in scope");
+                    }
+                }
+            }
+                
+            // None => panic!("ERROR: No scope found"),
+        // }
+// }
 
 fn eval_block(block: Vec<Expr>) -> Content {
-    // let mut result: Content = Content::Null;
 
+    let mut res: Content = Content::Null;
     for expr in block.iter() {
-        let result = eval_expr(expr.clone());
-        // println!("block_item = {:#?}", result);
-
-        // let (key, value) = match result {
-        //     Content::Tuple(left, right) => (left, *right),
-        //     _ => (panic!("Invalid input!")),
-        // };
-
-        // scope.insert(key.clone(), value.clone());
-
-        // println!("key = {}, value = {:#?}", key, value.clone());
-
-
-        // match value {
-        //     Content::Str(value) => scope.get(&value.to_string()),
-        //     // Content::Num(_) | Content::Bool(_) => scope.get(&key),
-        //     Content::Num(_) | Content::Bool(_) => continue,
-        //     // _ => continue,
-        //     // Content::Return(_, key) => match *key {}
-        //     Content::Return(_, var) => match *var {
-        //         Content::Str(var) => scope.get(&var.to_string()),
-        //         _ => (panic!("1 Invalid input!")),
-
-        //     },
-        //     _ => continue,
-            // _ => (panic!("2 Invalid input!")),
-        // };
-        // println!("key = {}, value = {:#?}", key, value.unwrap().clone());
-
-        // return Content::Tuple(key, Box::new(value.unwrap().clone()));
+        res = eval_expr(expr.clone());
+        match res {
+            Content::Return(_, _) => break,
+            _ => continue,
+        }
     }
 
-    return Content::Null;
+    return res;
 }
 
 fn eval_i32(left: Content, operator: Content, right: Content) -> Content {
