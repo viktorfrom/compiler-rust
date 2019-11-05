@@ -113,8 +113,8 @@ fn assign_var(name: Content, val: Content) -> Content {
         }
         _ => panic!("ERROR: Can't assign to var"),
     }
-    println!("hashmap = {:#?}", MEMORY.lock().unwrap());
-    return Content::Str("hej".to_string());
+    // println!("hashmap = {:#?}", MEMORY.lock().unwrap());
+    return Content::Null;
 }
 
 fn eval_return(var: &str) -> Content {
@@ -133,7 +133,7 @@ fn eval_return(var: &str) -> Content {
                         Content::Str(n) => Content::Str(n.to_string()),
                         // IntRep::Const(val) => IntRep::Const((*val).clone()),
                         // IntRep::TypeError(e) => IntRep::TypeError(e.to_string()),
-                        _ => panic!("hej"),
+                        _ => panic!("Could not match var in HashMap"),
                     },
                     None => {
                         panic!("ERROR: Var not found in scope");
