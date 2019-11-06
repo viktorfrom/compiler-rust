@@ -13,7 +13,7 @@ fn main() {
     // let string = "let a: i32 = 1;";
     // let string = "1 -2 +3;";
     // let string = "if true {let a: i32 = 1;return a;}";
-    let string = "if true {let a:i32 =1 ;return a;";
+    let string = "if true {let a:i32 =1;let b:i32 = a; return b;}";
     let tree = parser::parse_expr(string);
     // println!("Tree = {:#?}", tree);
 

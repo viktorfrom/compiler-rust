@@ -128,10 +128,13 @@ fn parse_paren(input: &str) -> IResult<&str, Expr> {
 pub fn parse_block(input: &str) -> IResult<&str, Vec<Expr>> {
     delimited(
         alt((tag("{"), multispace0)),
-        many0(alt((parse_return, terminated(
-            alt((parse_let, parse_func, parse_if)),
-            terminated(tag(";"), multispace0),
-        )))),
+        many0(alt((
+            parse_return,
+            terminated(
+                alt((parse_let, parse_func, parse_if)),
+                terminated(tag(";"), multispace0),
+            ),
+        ))),
         alt((tag("}"), multispace0)),
     )(input)
 }
