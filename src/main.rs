@@ -13,9 +13,11 @@ fn main() {
     // let string = "let a: i32 = 1;";
     // let string = "1 -2 +3;";
     // let string = "if true {let a: i32 = 1;return a;}";
-    let string = "if true {let a:i32 =1;let b:i32 = a; return b;}";
+    // let string = "if true {let a:i32 =1;let b:i32 = a; return b;}";
+    // let string = "while true {let a:i32 =1;let b:i32 = a; return b;}";
+    let string = "fn test(a:i32, b:i32) {let c:i32 = a, return c;}";
     let tree = parser::parse_expr(string);
-    // println!("Tree = {:#?}", tree);
+    println!("Tree = {:#?}", tree);
 
     let expr = eval_expr(tree.unwrap().1);
     println!("Eval = {:#?}", expr);

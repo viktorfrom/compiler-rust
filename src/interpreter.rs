@@ -63,8 +63,14 @@ pub fn eval_expr(input: Expr) -> Content {
             _ => panic!("Invalid Input!"),
         },
 
-        // Expr::While(while_param, var, block) => eval_if(eval_expr(*var), block),
-        Expr::If(if_param, block) => eval_if(eval_expr(*if_param), block),
+        Expr::Func(_func_name, params, block) => eval_func(params, block),
+        Expr::While(_while_param, var, block) => eval_if_while(eval_expr(*var), block),
+        Expr::If(if_param, block) => eval_if_while(eval_expr(*if_param), block),
+
+        Expr::Param(param, _param_type) => match *param {
+            Expr::Str(param) => assign_var(Content::Str(param.clone()), Content::Str(param.clone())),
+            _ => panic!("Invalid Input!"),
+        }
 
         Expr::Node(left, operator, right) => match *left {
             Expr::Num(left) => eval_i32(
@@ -88,12 +94,24 @@ pub fn eval_expr(input: Expr) -> Content {
     }
 }
 
-fn eval_if(if_param: Content, block: Vec<Expr>) -> Content {
+fn eval_if_while(if_param: Content, block: Vec<Expr>) -> Content {
     match if_param {
         Content::Bool(true) => eval_block(block),
         Content::Bool(false) => Content::Null,
         _ => (panic!("Invalid input!")),
     }
+}
+
+fn eval_func(params: Vec<Expr>, block: Vec<Expr>) -> Content {
+    let mut res: Content = Content::Null;
+    println!("params = {:#?}", params);
+
+    for expr in params.iter() {
+        res = eval_expr(expr.clone());
+    }
+
+    eval_block(block);
+    return res;
 }
 
 fn assign_var(name: Content, val: Content) -> Content {
@@ -105,7 +123,7 @@ fn assign_var(name: Content, val: Content) -> Content {
         }
         _ => panic!("ERROR: Can't assign to var"),
     }
-    // println!("hashmap = {:#?}", MEMORY.lock().unwrap());
+    println!("hashmap = {:#?}", MEMORY.lock().unwrap());
     return Content::Null;
 }
 
@@ -120,7 +138,7 @@ fn read_from_var(var: &str) -> Content {
     // Some(m) => {
     let map = MEMORY.lock().unwrap();
 
-    println!("{:#?}", map);
+    println!("{:#?}", var);
     match map.get(&var) {
         Some(var) => match var {
             Content::Num(num) => Content::Num(*num),
@@ -142,6 +160,7 @@ fn read_from_var(var: &str) -> Content {
 // }
 
 fn eval_block(block: Vec<Expr>) -> Content {
+    println!("block = {:#?}", block);
     let mut res: Content = Content::Null;
     for expr in block.iter() {
         res = eval_expr(expr.clone());
