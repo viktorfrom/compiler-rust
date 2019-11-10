@@ -15,7 +15,8 @@ fn main() {
     // let string = "if true {let a: i32 = 1;return a;}";
     // let string = "if true {let a:i32 =1;let b:i32 = a; return b;}";
     // let string = "while true {let a:i32 =1;let b:i32 = a; return b;}";
-    let string = "fn test(a:i32, b:i32) {let c:i32 = a, return c;}";
+    // let string = "fn test (a:i32) {let b:i32 = a;let c:i32 = b; return true;}";
+    let string = "let a = testfunc(1,2, 3);";
     let tree = parser::parse_expr(string);
     println!("Tree = {:#?}", tree);
 

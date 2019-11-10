@@ -6,6 +6,7 @@ pub mod expr_tree {
         Param(Box<Expr>, Box<Expr>),
         If(Box<Expr>, Vec<Expr>),
         Func(Box<Expr>, Vec<Expr>, Vec<Expr>),
+        FuncInput(Box<Expr>, Box<Expr>, Vec<Expr>),
         While(Box<Expr>, Box<Expr>, Vec<Expr>),
         Return(String, Box<Expr>),
         Num(i32),
