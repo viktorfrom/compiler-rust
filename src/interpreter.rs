@@ -17,7 +17,19 @@ lazy_static! {
     };
 }
 
-pub fn eval_expr(input: Expr) -> Content {
+pub fn eval_scope(scope: Vec<Expr>) -> Content {
+    let mut res: Content = Content::Null;
+    for expr in scope.iter() {
+        res = eval_expr(expr.clone());
+        match res {
+            // Content::Return(_, _) => break,
+            _ => continue,
+        }
+    }
+    return res
+}
+
+fn eval_expr(input: Expr) -> Content {
     match input {
         Expr::Num(i) => Content::Num(i),
         Expr::Bool(b) => Content::Bool(b),
@@ -58,21 +70,30 @@ pub fn eval_expr(input: Expr) -> Content {
             Type::Str => Content::ContentOp(ContentOp::Str),
         },
 
-        Expr::Return(_return_param, var) => match *var {
-            Expr::Str(var) => eval_return(&var.to_string()),
+        Expr::Return(return_param, var) => match *var {
+            Expr::Str(var) => eval_return(&return_param, &var.to_string()),
+            Expr::Num(var) => Content::Num(var),
+            Expr::Bool(var) => Content::Bool(var),
             _ => panic!("Invalid Input!"),
         },
 
-        Expr::Func(_func_name, params, block) => eval_func(params, block),
+        Expr::Func(func_name, params, block) => eval_func(eval_expr(*func_name), params, block),
         Expr::While(_while_param, var, block) => eval_if_while(eval_expr(*var), block),
         Expr::If(if_param, block) => eval_if_while(eval_expr(*if_param), block),
 
         Expr::Param(param, _param_type) => match *param {
-            Expr::Str(param) => assign_var(Content::Str(param.clone()), Content::Str(param.clone())),
+            Expr::Str(param) => {
+                assign_var(Content::Str(param.clone()), Content::Str(param.clone()))
+            }
             _ => panic!("Invalid Input!"),
-        }
+        },
 
-        Expr::Node(left, operator, right) => match *left {
+        Expr::FuncInput(var, func_name, block) => match *func_name {
+            Expr::Str(func_name) => eval_func_input(eval_expr(*var), &func_name.to_string(), block),
+            _ => panic!("Invalid Input!"),
+        },
+        
+        Expr::Let(left, operator, right) => match *left {
             Expr::Num(left) => eval_i32(
                 eval_expr(Expr::Num(left)),
                 eval_expr(*operator),
@@ -102,16 +123,29 @@ fn eval_if_while(if_param: Content, block: Vec<Expr>) -> Content {
     }
 }
 
-fn eval_func(params: Vec<Expr>, block: Vec<Expr>) -> Content {
-    let mut res: Content = Content::Null;
-    println!("params = {:#?}", params);
-
+fn eval_params(params: Vec<Expr>) {
     for expr in params.iter() {
-        res = eval_expr(expr.clone());
+        eval_expr(expr.clone());
     }
+}
 
-    eval_block(block);
+fn eval_func(func_name: Content, params: Vec<Expr>, block: Vec<Expr>) -> Content {
+    assign_var(func_name, Content::Str("Function name".to_string()));
+    eval_params(params);
+    let res = eval_block(block);
+    println!("res = {:#?}", res);
     return res;
+}
+
+fn eval_func_input(var: Content, func_name: &str, block: Vec<Expr>) -> Content {
+    read_from_var(func_name);
+    let res = eval_block(block);
+
+    println!("hashmap = {:#?}", MEMORY.lock().unwrap());
+    match var {
+        Content::Str(var) => return Content::Return(var, Box::new(res)),
+        _ => (panic!("Invalid input!")),
+    }
 }
 
 fn assign_var(name: Content, val: Content) -> Content {
@@ -123,14 +157,17 @@ fn assign_var(name: Content, val: Content) -> Content {
         }
         _ => panic!("ERROR: Can't assign to var"),
     }
-    println!("hashmap = {:#?}", MEMORY.lock().unwrap());
+    // println!("hashmap = {:#?}", MEMORY.lock().unwrap());
     return Content::Null;
 }
 
-fn eval_return(var: &str) -> Content {
-    let var = read_from_var(var);
-    return var;
+fn eval_return(_return_param: &str, var: &str) -> Content {
+    // assign_var(Content::Str(return_param.to_string()), Content::Str(var.to_string()));
+
+    let value = read_from_var(var);
+    return Content::Return(var.to_string(), Box::new(value));
 }
+
 fn read_from_var(var: &str) -> Content {
     // let scope = SCOPE.lock().unwrap();
     // println!("blop = {:#?}", scope);
@@ -138,7 +175,7 @@ fn read_from_var(var: &str) -> Content {
     // Some(m) => {
     let map = MEMORY.lock().unwrap();
 
-    println!("{:#?}", var);
+    // println!("{:#?}", var);
     match map.get(&var) {
         Some(var) => match var {
             Content::Num(num) => Content::Num(*num),
@@ -160,7 +197,7 @@ fn read_from_var(var: &str) -> Content {
 // }
 
 fn eval_block(block: Vec<Expr>) -> Content {
-    println!("block = {:#?}", block);
+    // println!("block = {:#?}", block);
     let mut res: Content = Content::Null;
     for expr in block.iter() {
         res = eval_expr(expr.clone());
@@ -235,7 +272,7 @@ mod interp_tests {
     #[test]
     fn test_interp_node() {
         assert_eq!(
-            eval_expr(Expr::Node(
+            eval_expr(Expr::Let(
                 Box::new(Expr::Num(2)),
                 Box::new(Expr::ArithOp(ArithOp::Mult)),
                 Box::new(Expr::Num(3))
@@ -243,7 +280,7 @@ mod interp_tests {
             Content::Num(6)
         );
         assert_eq!(
-            eval_expr(Expr::Node(
+            eval_expr(Expr::Let(
                 Box::new(Expr::Bool(true)),
                 Box::new(Expr::LogicOp(LogicOp::And)),
                 Box::new(Expr::Bool(false))
