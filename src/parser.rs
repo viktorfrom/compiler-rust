@@ -12,8 +12,8 @@ use nom::{
     IResult,
 };
 
-pub fn parse_expr(input: &str) -> IResult<&str, Expr> {
-    delimited(
+pub fn parse_expr(input: &str) -> IResult<&str, Vec<Expr>> {
+    many0(delimited(
         multispace0,
         alt((
             parse_func,
@@ -24,8 +24,8 @@ pub fn parse_expr(input: &str) -> IResult<&str, Expr> {
             parse_right_expr,
             parse_while,
         )),
-        multispace0,
-    )(input)
+        alt((tag(";"), multispace0)),
+    ))(input)
 }
 
 fn parse_ari_op(input: &str) -> IResult<&str, Expr> {
@@ -132,7 +132,7 @@ fn parse_block(input: &str) -> IResult<&str, Vec<Expr>> {
         many0(alt((
             parse_return,
             terminated(
-                alt((parse_let, parse_func, parse_if)),
+                alt((parse_let, parse_let_func, parse_func, parse_if)),
                 terminated(tag(";"), multispace0),
             ),
         ))),
@@ -225,7 +225,7 @@ fn parse_let(input: &str) -> IResult<&str, Expr> {
 
     Ok((
         substring,
-        Expr::Node(Box::new(var), Box::new(var_type), Box::new(expr)),
+        Expr::Let(Box::new(var), Box::new(var_type), Box::new(expr)),
     ))
 }
 
@@ -278,7 +278,7 @@ fn parse_right_expr(input: &str) -> IResult<&str, Expr> {
                     parse_right_expr,
                 )),
                 |(left, operator, right)| {
-                    Expr::Node(Box::new(left), Box::new(operator), Box::new(right))
+                    Expr::Let(Box::new(left), Box::new(operator), Box::new(right))
                 },
             ),
             parse_bool,
