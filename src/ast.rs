@@ -61,7 +61,6 @@ pub mod expr_tree {
 }
 
 pub mod content_tree {
-    // use std::fmt;
 
     #[derive(Debug, PartialEq, Eq, Clone, Hash)]
     pub enum Content {
@@ -69,7 +68,6 @@ pub mod content_tree {
         ContentOp(ContentOp),
         Bool(bool),
         Str(String),
-        // Tuple(String, Box<Content>),
         Return(String, Box<Content>),
         Null,
     }
