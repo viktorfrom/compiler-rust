@@ -2,7 +2,7 @@ pub mod expr_tree {
 
     #[derive(Debug, PartialEq, Eq, Clone)]
     pub enum Expr {
-        Node(Box<Expr>, Box<Expr>, Box<Expr>),
+        Let(Box<Expr>, Box<Expr>, Box<Expr>),
         Param(Box<Expr>, Box<Expr>),
         If(Box<Expr>, Vec<Expr>),
         Func(Box<Expr>, Vec<Expr>, Vec<Expr>),
