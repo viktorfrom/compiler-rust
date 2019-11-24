@@ -156,12 +156,12 @@ fn parse_param(input: &str) -> IResult<&str, Vec<Expr>> {
 
 fn parse_input_param(input: &str) -> IResult<&str, Vec<Expr>> {
     delimited(
-        alt((tag("("), multispace0)),   
-            many0(terminated(
+        alt((tag("("), multispace0)),
+        many0(terminated(
             alt((parse_i32, parse_bool)),
             alt((tag(","), multispace0)),
         )),
-        alt((tag(")"), multispace0)),   
+        alt((tag(")"), multispace0)),
     )(input)
 }
 
@@ -209,8 +209,6 @@ fn parse_while(input: &str) -> IResult<&str, Expr> {
         Expr::While(Box::new(var), Box::new(var_type), block),
     ))
 }
-
-
 
 fn parse_let(input: &str) -> IResult<&str, Expr> {
     let (substring, (var, var_type, expr)) = delimited(

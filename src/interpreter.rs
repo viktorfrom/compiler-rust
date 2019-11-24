@@ -26,7 +26,7 @@ pub fn eval_scope(scope: Vec<Expr>) -> Content {
             _ => continue,
         }
     }
-    return res
+    return res;
 }
 
 fn eval_expr(input: Expr) -> Content {
@@ -92,7 +92,7 @@ fn eval_expr(input: Expr) -> Content {
             Expr::Str(func_name) => eval_func_input(eval_expr(*var), &func_name.to_string(), block),
             _ => panic!("Invalid Input!"),
         },
-        
+
         Expr::Let(left, operator, right) => match *left {
             Expr::Num(left) => eval_i32(
                 eval_expr(Expr::Num(left)),
@@ -111,7 +111,7 @@ fn eval_expr(input: Expr) -> Content {
             ),
             _ => (panic!("Invalid input!")),
         },
-        _ => (panic!("Invalid input!")),
+        // _ => (panic!("Invalid input!")),
     }
 }
 
@@ -161,8 +161,11 @@ fn assign_var(name: Content, val: Content) -> Content {
     return Content::Null;
 }
 
-fn eval_return(_return_param: &str, var: &str) -> Content {
-    // assign_var(Content::Str(return_param.to_string()), Content::Str(var.to_string()));
+fn eval_return(return_param: &str, var: &str) -> Content {
+    assign_var(
+        Content::Str(return_param.to_string()),
+        Content::Str(var.to_string()),
+    );
 
     let value = read_from_var(var);
     return Content::Return(var.to_string(), Box::new(value));
@@ -171,29 +174,29 @@ fn eval_return(_return_param: &str, var: &str) -> Content {
 fn read_from_var(var: &str) -> Content {
     // let scope = SCOPE.lock().unwrap();
     // println!("blop = {:#?}", scope);
-    // match scope.last(){
-    // Some(m) => {
-    let map = MEMORY.lock().unwrap();
+    // match scope.last() {
+    //     Some(m) => {
+            let map = MEMORY.lock().unwrap();
 
-    // println!("{:#?}", var);
-    match map.get(&var) {
-        Some(var) => match var {
-            Content::Num(num) => Content::Num(*num),
-            Content::Bool(b) => Content::Bool(*b),
-            // IntRep::Undefined(t) => IntRep::Undefined(*t),
-            Content::Str(n) => Content::Str(n.to_string()),
-            // IntRep::Const(val) => IntRep::Const((*val).clone()),
-            // IntRep::TypeError(e) => IntRep::TypeError(e.to_string()),
-            _ => panic!("Could not match var in HashMap"),
-        },
-        None => {
-            panic!("ERROR: Var not found in scope");
+            // println!("{:#?}", var);
+            match map.get(&var) {
+                Some(var) => match var {
+                    Content::Num(num) => Content::Num(*num),
+                    Content::Bool(b) => Content::Bool(*b),
+                    // IntRep::Undefined(t) => IntRep::Undefined(*t),
+                    Content::Str(n) => Content::Str(n.to_string()),
+                    // IntRep::Const(val) => IntRep::Const((*val).clone()),
+                    // IntRep::TypeError(e) => IntRep::TypeError(e.to_string()),
+                    _ => panic!("Could not match var in HashMap"),
+                },
+                None => {
+                    panic!("ERROR: Var not found in scope");
+                }
+            }
         }
-    }
-}
 
-// None => panic!("ERROR: No scope found"),
-// }
+//         None => panic!("ERROR: No scope found"),
+//     }
 // }
 
 fn eval_block(block: Vec<Expr>) -> Content {
