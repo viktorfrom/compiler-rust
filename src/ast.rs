@@ -1,6 +1,6 @@
 pub mod expr_tree {
 
-    #[derive(Debug, PartialEq, Eq, Clone)]
+    #[derive(Debug, PartialEq, Eq, Clone, Hash)]
     pub enum Expr {
         Let(Box<Expr>, Box<Expr>, Box<Expr>),
         Param(Box<Expr>, Box<Expr>),
@@ -19,7 +19,7 @@ pub mod expr_tree {
         Str(String),
     }
 
-    #[derive(Debug, PartialEq, Eq, Clone)]
+    #[derive(Debug, PartialEq, Eq, Clone, Hash)]
     pub enum ArithOp {
         Add,
         Sub,
@@ -27,14 +27,14 @@ pub mod expr_tree {
         Div,
     }
 
-    #[derive(Debug, PartialEq, Eq, Clone)]
+    #[derive(Debug, PartialEq, Eq, Clone, Hash)]
     pub enum LogicOp {
         And,
         Or,
         Not,
     }
 
-    #[derive(Debug, PartialEq, Eq, Clone)]
+    #[derive(Debug, PartialEq, Eq, Clone, Hash)]
     pub enum AssignOp {
         Equ,
         PluEqu,
@@ -42,7 +42,7 @@ pub mod expr_tree {
         DivEqu,
     }
 
-    #[derive(Debug, PartialEq, Eq, Clone)]
+    #[derive(Debug, PartialEq, Eq, Clone, Hash)]
     pub enum RelOp {
         EquEqu,
         NotEqu,
@@ -52,7 +52,7 @@ pub mod expr_tree {
         Gre,
     }
 
-    #[derive(Debug, PartialEq, Eq, Clone)]
+    #[derive(Debug, PartialEq, Eq, Clone, Hash)]
     pub enum Type {
         Integer,
         Bool,

@@ -1,28 +1,13 @@
 use crate::ast::content_tree::*;
 use crate::ast::expr_tree::*;
 
-use std::collections::HashMap;
-
-use lazy_static;
-use std::sync::Mutex;
-
-lazy_static! {
-    static ref MEMORY: Mutex<HashMap<&'static str, Content>> = {
-        let m = HashMap::new();
-        Mutex::new(m)
-    };
-    static ref SCOPE: Mutex<Vec<Mutex<HashMap<&'static str, Content>>>> = {
-        let s = Vec::new();
-        Mutex::new(s)
-    };
-}
+use crate::memory::*;
 
 pub fn eval_scope(scope: Vec<Expr>) -> Content {
     let mut res: Content = Content::Null;
     for expr in scope.iter() {
         res = eval_expr(expr.clone());
         match res {
-            // Content::Return(_, _) => break,
             _ => continue,
         }
     }
@@ -78,6 +63,7 @@ fn eval_expr(input: Expr) -> Content {
         },
 
         Expr::Func(func_name, params, block) => eval_func(eval_expr(*func_name), params, block),
+
         Expr::While(_while_param, var, block) => eval_if_while(eval_expr(*var), block),
         Expr::If(if_param, block) => eval_if_while(eval_expr(*if_param), block),
 
@@ -130,35 +116,23 @@ fn eval_params(params: Vec<Expr>) {
 }
 
 fn eval_func(func_name: Content, params: Vec<Expr>, block: Vec<Expr>) -> Content {
-    assign_var(func_name, Content::Str("Function name".to_string()));
-    eval_params(params);
-    let res = eval_block(block);
-    println!("res = {:#?}", res);
-    return res;
+    let v = vec![params, block];
+
+
+    insert_function(func_name, v);
+    // eval_params(params);
+    // let res = eval_block(block);
+    // println!("res = {:#?}", res);
+    return Content::Null;
 }
 
 fn eval_func_input(var: Content, func_name: &str, block: Vec<Expr>) -> Content {
-    read_from_var(func_name);
+    // println!("var = {:#?}, func_name = {:#?}, block = {:#?}", var, func_name, block);
+    read_from_func(func_name);
+    
     let res = eval_block(block);
 
-    println!("hashmap = {:#?}", MEMORY.lock().unwrap());
-    match var {
-        Content::Str(var) => return Content::Return(var, Box::new(res)),
-        _ => (panic!("Invalid input!")),
-    }
-}
-
-fn assign_var(name: Content, val: Content) -> Content {
-    // println!("{:#?} {:#?}", name, val);
-    match name {
-        Content::Str(n) => {
-            let mut map = MEMORY.lock().unwrap();
-            map.insert(Box::leak(n.into_boxed_str()), val);
-        }
-        _ => panic!("ERROR: Can't assign to var"),
-    }
-    // println!("hashmap = {:#?}", MEMORY.lock().unwrap());
-    return Content::Null;
+    return res;
 }
 
 fn eval_return(return_param: &str, var: &str) -> Content {
@@ -170,34 +144,6 @@ fn eval_return(return_param: &str, var: &str) -> Content {
     let value = read_from_var(var);
     return Content::Return(var.to_string(), Box::new(value));
 }
-
-fn read_from_var(var: &str) -> Content {
-    // let scope = SCOPE.lock().unwrap();
-    // println!("blop = {:#?}", scope);
-    // match scope.last() {
-    //     Some(m) => {
-            let map = MEMORY.lock().unwrap();
-
-            // println!("{:#?}", var);
-            match map.get(&var) {
-                Some(var) => match var {
-                    Content::Num(num) => Content::Num(*num),
-                    Content::Bool(b) => Content::Bool(*b),
-                    // IntRep::Undefined(t) => IntRep::Undefined(*t),
-                    Content::Str(n) => Content::Str(n.to_string()),
-                    // IntRep::Const(val) => IntRep::Const((*val).clone()),
-                    // IntRep::TypeError(e) => IntRep::TypeError(e.to_string()),
-                    _ => panic!("Could not match var in HashMap"),
-                },
-                None => {
-                    panic!("ERROR: Var not found in scope");
-                }
-            }
-        }
-
-//         None => panic!("ERROR: No scope found"),
-//     }
-// }
 
 fn eval_block(block: Vec<Expr>) -> Content {
     // println!("block = {:#?}", block);
