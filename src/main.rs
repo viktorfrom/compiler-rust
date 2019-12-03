@@ -3,8 +3,8 @@ extern crate lazy_static;
 
 mod ast;
 mod interpreter;
-mod parser;
 mod memory;
+mod parser;
 
 use crate::interpreter::*;
 use crate::parser::*;
@@ -17,10 +17,10 @@ fn main() {
     // let string = "if true {let a: i32 = 1;return a;}";
     // let string = "if true {let a:i32 =1;let b:i32 = a; return b;}";
     // let string = "while true {let a:i32 =1;let b:i32 = a; return b;}";
-    let string = "fn testfunc(a:i32) {let b:i32 = a;let c:i32 = b; return true;}; let a = testfunc(1);";
+    let string = "pub fn testfunc(a:i32) {let b:i32 = a; return true;}; let a = testfunc(3);";
     // let string = "let a = testfunc(1,2, 3);";
-    // let string = "fn testfunc(a:i32) {let b:i32 = a; return b;}; let c = testfunc();";
-    // let string = "let c = testfunc(1);";
+    // let string = "pub fn testfunc() {return true;}; let b: bool = testfunc();";
+    // let string = "let b:i32 = 1;return 1;";
 
     let tree = parse_expr(string);
     // println!("Tree = {:#?}", tree);

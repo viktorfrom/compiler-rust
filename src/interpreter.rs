@@ -57,8 +57,8 @@ fn eval_expr(input: Expr) -> Content {
 
         Expr::Return(return_param, var) => match *var {
             Expr::Str(var) => eval_return(&return_param, &var.to_string()),
-            Expr::Num(var) => Content::Num(var),
-            Expr::Bool(var) => Content::Bool(var),
+            Expr::Num(var) => Content::Return(return_param, Box::new(Content::Num(var))),
+            Expr::Bool(var) => Content::Return(return_param, Box::new(Content::Bool(var))),
             _ => panic!("Invalid Input!"),
         },
 
@@ -69,7 +69,7 @@ fn eval_expr(input: Expr) -> Content {
 
         Expr::Param(param, _param_type) => match *param {
             Expr::Str(param) => {
-                assign_var(Content::Str(param.clone()), Content::Str(param.clone()))
+                insert_var(Content::Str(param.clone()), Content::Str(param.clone()))
             }
             _ => panic!("Invalid Input!"),
         },
@@ -109,44 +109,71 @@ fn eval_if_while(if_param: Content, block: Vec<Expr>) -> Content {
     }
 }
 
-fn eval_params(params: Vec<Expr>) {
-    for expr in params.iter() {
-        eval_expr(expr.clone());
+fn eval_params(params: Vec<Expr>, args: Vec<Expr>) {
+    if params.len() != args.len() {
+        panic!(
+            "ERROR: Wrong amount of arguments. Expected {} found {}",
+            params.len(),
+            args.len()
+        );
+    }
+
+    for i in 0..params.len() {
+        let name;
+
+        match &params[i] {
+            Expr::Param(n, _t) => {
+                match &**n {
+                    Expr::Str(na) => name = Content::Str(na.to_string()),
+                    _ => panic!("ERROR: Value is not a variable"),
+                };
+            }
+            _ => panic!("ERROR: Value is not a parameter"),
+        }
+
+        insert_var(name, eval_expr(args[i].clone()));
     }
 }
 
 fn eval_func(func_name: Content, params: Vec<Expr>, block: Vec<Expr>) -> Content {
     let v = vec![params, block];
-
-
     insert_function(func_name, v);
-    // eval_params(params);
-    // let res = eval_block(block);
-    // println!("res = {:#?}", res);
+
     return Content::Null;
 }
 
-fn eval_func_input(var: Content, func_name: &str, block: Vec<Expr>) -> Content {
-    // println!("var = {:#?}, func_name = {:#?}, block = {:#?}", var, func_name, block);
-    read_from_func(func_name);
-    
-    let res = eval_block(block);
+fn eval_func_input(var: Content, func_name: &str, args: Vec<Expr>) -> Content {
+    let func_content = read_from_func(func_name).1;
+    let params = func_content[0].clone();
+    let block = func_content[1].clone();
 
-    return res;
+    eval_params(params, args);
+    let result = eval_block(block);
+    let var_name = match var {
+        Content::Str(var) => var,
+        _ => panic!("err1"),
+    };
+
+    let value = match result {
+        Content::Return(_, var) => var,
+        _ => panic!("err1"),
+    };
+
+    return Content::Return(var_name.to_string(), value);
 }
 
 fn eval_return(return_param: &str, var: &str) -> Content {
-    assign_var(
+    insert_var(
         Content::Str(return_param.to_string()),
         Content::Str(var.to_string()),
     );
 
     let value = read_from_var(var);
+    println!("test = {:#?}", return_param);
     return Content::Return(var.to_string(), Box::new(value));
 }
 
 fn eval_block(block: Vec<Expr>) -> Content {
-    // println!("block = {:#?}", block);
     let mut res: Content = Content::Null;
     for expr in block.iter() {
         res = eval_expr(expr.clone());
@@ -191,18 +218,16 @@ fn eval_bool(left: Content, operator: Content, right: Content) -> Content {
 fn eval_let(left: Content, operator: Content, right: Content) -> Content {
     match (left, operator, right) {
         (Content::Str(left), Content::ContentOp(ContentOp::Integer), Content::Num(right)) => {
-            assign_var(Content::Str(left), Content::Num(right))
+            insert_var(Content::Str(left), Content::Num(right))
         }
         (Content::Str(left), Content::ContentOp(ContentOp::Integer), Content::Str(right)) => {
-            assign_var(Content::Str(left), read_from_var(&right.to_string()))
-            // assign_var(Content::Str(left), Content::Num(right))
+            insert_var(Content::Str(left), read_from_var(&right.to_string()))
         }
         (Content::Str(left), Content::ContentOp(ContentOp::Bool), right) => {
-            assign_var(Content::Str(left), right)
+            insert_var(Content::Str(left), right)
         }
         (Content::Str(left), Content::ContentOp(ContentOp::Str), right) => {
-            // assign_var(Content::Str(left), read_from_var(&right.to_string()))
-            assign_var(Content::Str(left), right)
+            insert_var(Content::Str(left), right)
         }
         _ => panic!("Invalid input!"),
     }
