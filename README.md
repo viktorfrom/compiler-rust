@@ -1,20 +1,28 @@
 # D7050E - Compiler construction and formal languages
 ###### 
-Project written in in Rust language using Nom library for Compiler construction and formal languages course at Luleå tekniska universitet.
+Project written in in Rust using Nom crate for the Compiler construction and formal languages course at Luleå University of Technology
 
-https://www.ltu.se/edu/course/D70/D7050E/D7050E-Kompilatorteknik-och-formella-sprak-1.183294?l=en
+## Requirements
+* Rust stable 1.41+ 
 
---------
+## Running tests
 
-### Rust language
+```
+cargo test
+```
 
-https://www.rust-lang.org/learn/get-started
+### Usage
+Clone the repository from git and compile the project using,
+```
+cargo build
+```
+or simply run,
+```
+cargo run
+```
 
--------
+## Authors
+* Viktor From - vikfro-@student.ltu.se - [viktorfrom](https://github.com/viktorfrom)
 
-### Nom, eating data byte by byte.
-Nom is a parser combinator library with a focus on safe parsing, streaming patterns, and as much as possible zero copy.
-
-https://docs.rs/nom/
-
--------
+## License
+Licensed under the MIT license. See [LICENSE](LICENSE) for details.
