@@ -14,7 +14,10 @@ pub fn type_scope(scope: Vec<Expr>) -> bool {
     }
 
     println!("{:#?}", res);
-    
+    if res == Content::Null {
+        return false;
+    }
+
     return true;
 }
 
@@ -22,6 +25,7 @@ fn type_expr(input: Expr) -> Content {
     match input {
         Expr::Num(_) => Content::Num(0),
         Expr::Bool(_) => Content::Bool(false),
+        Expr::Str(s) => Content::Str("string".to_string()),
 
         _ => (panic!("Invalid input!")),
     }
