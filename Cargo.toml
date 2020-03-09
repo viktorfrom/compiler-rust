@@ -1,0 +1,10 @@
+[package]
+name = "d7050e"
+version = "0.1.0"
+authors = ["viktorfrom"]
+edition = "2018"
+
+[dependencies]
+nom = "5.0.1"
+lazy_static= "1.4.0"
+nom_locate = "1.0.0"
