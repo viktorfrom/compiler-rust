@@ -56,17 +56,17 @@ fn type_expr(input: Expr) -> Content {
         },
 
         Expr::Let(left, operator, right) => match *left {
-            Expr::Num(left) => eval_i32(
+            Expr::Num(left) => type_i32(
                 type_expr(Expr::Num(left)),
                 type_expr(*operator),
                 type_expr(*right),
             ),
-            Expr::Bool(left) => eval_bool(
+            Expr::Bool(left) => type_bool(
                 type_expr(Expr::Bool(left)),
                 type_expr(*operator),
                 type_expr(*right),
             ),
-            Expr::Str(left) => eval_let(
+            Expr::Str(left) => type_let(
                 type_expr(Expr::Str(left)),
                 type_expr(*operator),
                 type_expr(*right),
@@ -78,7 +78,7 @@ fn type_expr(input: Expr) -> Content {
     }
 }
 
-fn eval_i32(left: Content, operator: Content, right: Content) -> Content {
+fn type_i32(left: Content, operator: Content, right: Content) -> Content {
     match (left, operator, right) {
         (Content::Num(left), Content::ContentOp(ContentOp::Add), Content::Num(right)) => {
             Content::Num(left + right)
@@ -96,7 +96,7 @@ fn eval_i32(left: Content, operator: Content, right: Content) -> Content {
     }
 }
 
-fn eval_bool(left: Content, operator: Content, right: Content) -> Content {
+fn type_bool(left: Content, operator: Content, right: Content) -> Content {
     match (left, operator, right) {
         (Content::Bool(left), Content::ContentOp(ContentOp::And), Content::Bool(right)) => {
             Content::Bool(left && right)
@@ -108,7 +108,7 @@ fn eval_bool(left: Content, operator: Content, right: Content) -> Content {
     }
 }
 
-fn eval_let(left: Content, operator: Content, right: Content) -> Content {
+fn type_let(left: Content, operator: Content, right: Content) -> Content {
     match (left, operator, right) {
         (Content::Str(left), Content::ContentOp(ContentOp::Integer), Content::Num(right)) => {
             insert_var(Content::Str(left), Content::Num(right))
