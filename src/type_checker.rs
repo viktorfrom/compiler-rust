@@ -7,13 +7,16 @@ pub fn type_scope(scope: Vec<Expr>) -> bool {
 
     let mut res: Content = Content::Null;
     for expr in scope.iter() {
+        println!("expr = {:#?}", expr);
+
         res = type_expr(expr.clone());
+        println!("res = {:#?}", res);
+
         match res {
             _ => continue,
         }
     }
 
-    println!("{:#?}", res);
     if res == Content::Null {
         return false;
     }
@@ -55,6 +58,30 @@ fn type_expr(input: Expr) -> Content {
             Type::Str => Content::ContentOp(ContentOp::Str),
         },
 
+        Expr::Return(return_param, var) => match *var {
+            Expr::Str(var) => type_return(&return_param, &var.to_string()),
+            Expr::Num(var) => Content::Return(return_param, Box::new(Content::Num(var))),
+            Expr::Bool(var) => Content::Return(return_param, Box::new(Content::Bool(var))),
+            _ => panic!("Invalid Input!"),
+        },
+
+        Expr::Func(func_name, params, block) => type_func(type_expr(*func_name), params, block),
+
+        Expr::While(_while_param, var, block) => type_if_while(type_expr(*var), block),
+        Expr::If(if_param, block) => type_if_while(type_expr(*if_param), block),
+
+        Expr::Param(param, _param_type) => match *param {
+            Expr::Str(param) => {
+                insert_var(Content::Str(param.clone()), Content::Str(param.clone()))
+            }
+            _ => panic!("Invalid Input!"),
+        },
+
+        Expr::FuncInput(var, func_name, block) => match *func_name {
+            Expr::Str(func_name) => type_func_input(type_expr(*var), &func_name.to_string(), block),
+            _ => panic!("Invalid Input!"),
+        },
+
         Expr::Let(left, operator, right) => match *left {
             Expr::Num(left) => type_i32(
                 type_expr(Expr::Num(left)),
@@ -71,11 +98,95 @@ fn type_expr(input: Expr) -> Content {
                 type_expr(*operator),
                 type_expr(*right),
             ),
-            _ => Content::Null,
+            _ => (panic!("Invalid input!")),
         }
 
-        _ => Content::Null,
+        _ => (panic!("Invalid input!")),
     }
+}
+
+fn type_if_while(if_param: Content, block: Vec<Expr>) -> Content {
+    match if_param {
+        Content::Bool(true) => type_block(block),
+        Content::Bool(false) => Content::Null,
+        _ => (panic!("Invalid input!")),
+    }
+}
+
+fn type_params(params: Vec<Expr>, args: Vec<Expr>) {
+    if params.len() != args.len() {
+        panic!(
+            "ERROR: Wrong amount of arguments. Expected {} found {}",
+            params.len(),
+            args.len()
+        );
+    }
+
+    for i in 0..params.len() {
+        let name;
+
+        match &params[i] {
+            Expr::Param(n, _t) => {
+                match &**n {
+                    Expr::Str(na) => name = Content::Str(na.to_string()),
+                    _ => panic!("ERROR: Value is not a variable"),
+                };
+            }
+            _ => panic!("ERROR: Value is not a parameter"),
+        }
+
+        insert_var(name, type_expr(args[i].clone()));
+    }
+}
+
+fn type_func(func_name: Content, params: Vec<Expr>, block: Vec<Expr>) -> Content {
+    let v = vec![params, block];
+    insert_function(func_name, v);
+
+    return Content::Null;
+}
+
+fn type_func_input(var: Content, func_name: &str, args: Vec<Expr>) -> Content {
+    let func_content = read_from_func(func_name).1;
+    let params = func_content[0].clone();
+    let block = func_content[1].clone();
+
+    type_params(params, args);
+    let result = type_block(block);
+    let var_name = match var {
+        Content::Str(var) => var,
+        _ => panic!("err1"),
+    };
+
+    let value = match result {
+        Content::Return(_, var) => var,
+        _ => panic!("err1"),
+    };
+
+    return Content::Return(var_name.to_string(), value);
+}
+
+fn type_return(return_param: &str, var: &str) -> Content {
+    insert_var(
+        Content::Str(return_param.to_string()),
+        Content::Str(var.to_string()),
+    );
+
+    let value = read_from_var(var);
+    println!("test = {:#?}", return_param);
+    return Content::Return(var.to_string(), Box::new(value));
+}
+
+fn type_block(block: Vec<Expr>) -> Content {
+    let mut res: Content = Content::Null;
+    for expr in block.iter() {
+        res = type_expr(expr.clone());
+        match res {
+            Content::Return(_, _) => break,
+            _ => continue,
+        }
+    }
+    return res;
 }
 
 fn type_i32(left: Content, operator: Content, right: Content) -> Content {
@@ -92,7 +203,7 @@ fn type_i32(left: Content, operator: Content, right: Content) -> Content {
         (Content::Num(left), Content::ContentOp(ContentOp::Mult), Content::Num(right)) => {
             Content::Num(left * right)
         }
-        _ => Content::Null,
+        _ => (panic!("Invalid input!")),
     }
 }
 
@@ -104,7 +215,7 @@ fn type_bool(left: Content, operator: Content, right: Content) -> Content {
         (Content::Bool(left), Content::ContentOp(ContentOp::Or), Content::Bool(right)) => {
             Content::Bool(left || right)
         }
-        _ => Content::Null,
+        _ => (panic!("Invalid input!")),
     }
 }
 
@@ -122,6 +233,6 @@ fn type_let(left: Content, operator: Content, right: Content) -> Content {
         (Content::Str(left), Content::ContentOp(ContentOp::Str), right) => {
             insert_var(Content::Str(left), right)
         }
-        _ => Content::Null,
+        _ => (panic!("Invalid input!")),
     }
 }
