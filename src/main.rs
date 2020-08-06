@@ -25,7 +25,7 @@ fn main() {
     // let string = "let b:i32 = 1;return 1;";
 
 
-    let string = "1";
+    let string = "let a: i32 = 1;";
 
     let tree = parse_expr(string);
     // println!("Tree = {:#?}", tree);

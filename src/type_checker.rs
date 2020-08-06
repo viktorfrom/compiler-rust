@@ -4,20 +4,16 @@ use crate::ast::expr_tree::*;
 use crate::memory::*;
 
 pub fn type_scope(scope: Vec<Expr>) -> bool {
-
-    let mut res: Content = Content::Null;
+    let mut res = Vec::new();
     for expr in scope.iter() {
-        println!("expr = {:#?}", expr);
-
-        res = type_expr(expr.clone());
-        println!("res = {:#?}", res);
+        res.push(type_expr(expr.clone()));
 
         match res {
             _ => continue,
         }
     }
 
-    if res == Content::Null {
+    if res.is_empty() {
         return false;
     }
 
