@@ -232,3 +232,34 @@ fn type_let(left: Content, operator: Content, right: Content) -> Content {
         _ => (panic!("Invalid input!")),
     }
 }
+
+#[cfg(test)]
+mod interp_tests {
+    use super::*;
+
+    #[test]
+    fn test_interp() {
+        assert_eq!(type_expr(Expr::Num(1)), Content::Num(0));
+        assert_eq!(type_expr(Expr::Bool(true)), Content::Bool(false));
+    }
+
+    #[test]
+    fn test_interp_node() {
+        assert_eq!(
+            type_expr(Expr::Let(
+                Box::new(Expr::Num(2)),
+                Box::new(Expr::ArithOp(ArithOp::Mult)),
+                Box::new(Expr::Num(3))
+            )),
+            Content::Num(0)
+        );
+        assert_eq!(
+            type_expr(Expr::Let(
+                Box::new(Expr::Bool(true)),
+                Box::new(Expr::LogicOp(LogicOp::And)),
+                Box::new(Expr::Bool(true))
+            )),
+            Content::Bool(false)
+        );
+    }
+}
