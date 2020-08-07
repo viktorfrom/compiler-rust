@@ -1,68 +1,75 @@
-use inkwell::OptimizationLevel;
-use inkwell::builder::Builder;
-use inkwell::context::Context;
-use inkwell::execution_engine::{ExecutionEngine, JitFunction};
-use inkwell::module::Module;
-use inkwell::targets::{InitializationConfig, Target};
-use std::error::Error;
+use crate::ast::{content_tree::*, expr_tree::*};
 
-/// Convenience type alias for the `sum` function.
-///
+use inkwell::{
+    builder::Builder,
+    context::Context,
+    execution_engine::{ExecutionEngine, JitFunction},
+    module::Module,
+    targets::{InitializationConfig, Target},
+    values::{BasicValueEnum, FloatValue, FunctionValue, InstructionValue, IntValue, PointerValue},
+    OptimizationLevel,
+};
+use std::{collections::HashMap, error::Error};
+
 /// Calling this is innately `unsafe` because there's no guarantee it doesn't
 /// do `unsafe` operations internally.
-type SumFunc = unsafe extern "C" fn(u64, u64, u64) -> u64;
+type ExprFunc = unsafe extern "C" fn() -> i32;
 
 struct CodeGen<'ctx> {
     context: &'ctx Context,
     module: Module<'ctx>,
     builder: Builder<'ctx>,
     execution_engine: ExecutionEngine<'ctx>,
+    variables: HashMap<String, PointerValue<'ctx>>,
+    fn_value_opt: Option<FunctionValue<'ctx>>,
 }
 
 impl<'ctx> CodeGen<'ctx> {
-    fn jit_compile_sum(&self) -> Option<JitFunction<SumFunc>> {
-        let i64_type = self.context.i64_type();
-        let fn_type = i64_type.fn_type(&[i64_type.into(), i64_type.into(), i64_type.into()], false);
-        let function = self.module.add_function("sum", fn_type, None);
-        let basic_block = self.context.append_basic_block(function, "entry");
+    fn codegen_num(&mut self, num: i32) -> IntValue {
+        self.context.i32_type().const_int(num as u64, false)
+    }
 
-        self.builder.position_at_end(basic_block);
+    fn codegen_bool(&mut self, b: bool) -> IntValue {
+        match b {
+            true => self.context.bool_type().const_int(1, false),
+            false => self.context.bool_type().const_int(0, false),
+        }
+    }
 
-        let x = function.get_nth_param(0)?.into_int_value();
-        let y = function.get_nth_param(1)?.into_int_value();
-        let z = function.get_nth_param(2)?.into_int_value();
+    fn codegen_scope(&mut self, scope: Expr) -> Result<(), Box<Error>> {
+        println!("scope = {:#?}", scope);
 
-        let sum = self.builder.build_int_add(x, y, "sum");
-        let sum = self.builder.build_int_add(sum, z, "sum");
-
-        self.builder.build_return(Some(&sum));
-
-        unsafe { self.execution_engine.get_function("sum").ok() }
+        Ok(())
     }
 }
 
-
-fn main() -> Result<(), Box<dyn Error>> {
+pub fn compiler(tree: Vec<Expr>) -> Result<(), Box<dyn Error>> {
     let context = Context::create();
     let module = context.create_module("sum");
     let execution_engine = module.create_jit_execution_engine(OptimizationLevel::None)?;
-    let codegen = CodeGen {
+    let mut codegen = CodeGen {
         context: &context,
         module,
         builder: context.create_builder(),
         execution_engine,
+        fn_value_opt: None,
+        variables: HashMap::new(),
     };
 
-    let sum = codegen.jit_compile_sum().ok_or("Unable to JIT compile `sum`")?;
-
-    let x = 1u64;
-    let y = 2u64;
-    let z = 3u64;
-
-    unsafe {
-        println!("{} + {} + {} = {}", x, y, z, sum.call(x, y, z));
-        assert_eq!(sum.call(x, y, z), x + y + z);
+    for scope in tree {
+        codegen.codegen_scope(scope);
     }
+
+    // let sum = codegen.jit_compile_sum().ok_or("Unable to JIT compile `sum`")?;
+
+    // let x = 1u64;
+    // let y = 2u64;
+    // let z = 3u64;
+
+    // unsafe {
+    //     println!("{} + {} + {} = {}", x, y, z, sum.call(x, y, z));
+    //     assert_eq!(sum.call(x, y, z), x + y + z);
+    // }
 
     Ok(())
 }

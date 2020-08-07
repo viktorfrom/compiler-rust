@@ -3,11 +3,13 @@ extern crate lazy_static;
 
 mod ast;
 mod interpreter;
+mod llvm;
 mod memory;
 mod parser;
 mod type_checker;
 
 use crate::interpreter::*;
+use crate::llvm::*;
 use crate::parser::*;
 use crate::type_checker::*;
 
@@ -24,15 +26,15 @@ fn main() {
     // let string = "pub fn testfunc() {return true;}; let b: bool = testfunc();";
     // let string = "let b:i32 = 1;return 1;";
 
-
     let string = "let a: i32 = 1;";
 
-    let tree = parse_expr(string);
+    let tree = parse_expr(string).unwrap().1;
     // println!("Tree = {:#?}", tree);
 
-    if type_scope(tree.clone().unwrap().1) {
-        println!("Type checker passed!");
-        let expr = eval_scope(tree.clone().unwrap().1);
-        println!("Eval = {:#?}", expr);
+    if type_scope(tree.clone()) {
+        compiler(tree).ok();
+        // println!("Type checker passed!");
+        // let expr = eval_scope(tree.clone().unwrap().1);
+        // println!("Eval = {:#?}", expr);
     }
 }

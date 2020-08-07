@@ -95,7 +95,7 @@ fn type_expr(input: Expr) -> Content {
                 type_expr(*right),
             ),
             _ => (panic!("Invalid input!")),
-        }
+        },
 
         _ => (panic!("Invalid input!")),
     }

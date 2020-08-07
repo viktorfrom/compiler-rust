@@ -99,13 +99,4 @@ pub mod content_tree {
         Bool,
         Str,
     }
-
-    // impl fmt::Display for Content {
-    //     fn fmt(&self, f: &mut fmt::Formatter)  -> fmt::Result {
-    //         match self {
-    //             Content::Str(value) => write!(f, "{}", value),
-
-    //         }
-    //     }
-    // }
 }

@@ -21,25 +21,25 @@ lazy_static! {
     };
 }
 
-pub fn insert_function(name: Content, val: Vec<Vec<Expr>>) -> Content {
-    match name {
-        Content::Str(n) => {
+pub fn insert_function(var: Content, func: Vec<Vec<Expr>>) -> Content {
+    match var {
+        Content::Str(v) => {
             let mut map = FUNCTION_MAP.lock().unwrap();
-            map.insert(Box::leak(n.into_boxed_str()), val);
+            map.insert(Box::leak(v.into_boxed_str()), func);
         }
-        _ => panic!("ERROR: Can't assign to var"),
+        _ => panic!("ERROR: Can't func '{:?}' assign to var", func),
     }
     // println!("hashmap = {:#?}", FUNCTION_MAP.lock().unwrap());
     return Content::Null;
 }
 
-pub fn insert_var(name: Content, val: Content) -> Content {
-    match name {
-        Content::Str(n) => {
+pub fn insert_var(var: Content, val: Content) -> Content {
+    match var {
+        Content::Str(v) => {
             let mut map = MEMORY.lock().unwrap();
-            map.insert(Box::leak(n.into_boxed_str()), val);
+            map.insert(Box::leak(v.into_boxed_str()), val);
         }
-        _ => panic!("ERROR: Can't assign to var"),
+        _ => panic!("ERROR: Can't assign val '{:?}' to var", val),
     }
     // println!("hashmap = {:#?}", MEMORY.lock().unwrap());
     return Content::Null;
@@ -53,10 +53,10 @@ pub fn read_from_var(var: &str) -> Content {
             Content::Num(num) => Content::Num(*num),
             Content::Bool(b) => Content::Bool(*b),
             Content::Str(n) => Content::Str(n.to_string()),
-            _ => panic!("Could not match var in HashMap"),
+            _ => panic!("Could not match var '{:#?}' in HashMap", var),
         },
         None => {
-            panic!("ERROR: Var not found in scope");
+            panic!("ERROR: Var '{:?}' not found in scope", var);
         }
     }
 }
