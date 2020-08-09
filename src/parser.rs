@@ -113,6 +113,7 @@ fn parse_type(input: &str) -> IResult<&str, Expr> {
             map(tag("i32"), |_| Expr::Type(Type::Integer)),
             map(tag("bool"), |_| Expr::Type(Type::Bool)),
             map(tag("String"), |_| Expr::Type(Type::Str)),
+            map(tag("()"), |_| Expr::Type(Type::Void)),
         )),
         multispace0,
     )(input)
@@ -131,8 +132,12 @@ fn parse_block(input: &str) -> IResult<&str, Vec<Expr>> {
         alt((tag("{"), multispace0)),
         many0(alt((
             parse_return,
-            terminated(
-                alt((parse_let, parse_let_func, parse_func, parse_if)),
+            delimited(
+                multispace0,
+                terminated(
+                    alt((parse_let, parse_let_func, parse_func, parse_if)),
+                    tag(";"),
+                ),
                 terminated(tag(";"), multispace0),
             ),
         ))),
@@ -182,13 +187,13 @@ fn parse_if(input: &str) -> IResult<&str, Expr> {
     let (substring, (expr, block)) = delimited(
         delimited(multispace0, tag("if"), multispace0),
         tuple((
-            parse_right_expr,
+            alt((parse_right_expr, parse_var)),
             delimited(multispace0, parse_block, multispace0),
         )),
         multispace0,
     )(input)?;
 
-    // println!("expr = {:#?}, block = {:#?}", expr, block);
+    println!("expr = {:#?}, block = {:#?}", expr, block);
 
     Ok((substring, Expr::If(Box::new(expr), block)))
 }
@@ -257,11 +262,13 @@ fn parse_func(input: &str) -> IResult<&str, Expr> {
         tuple((
             parse_var,
             delimited(multispace0, parse_param, multispace0),
-            delimited(multispace0, parse_block, multispace0),
+            preceded(
+                delimited(multispace0, preceded(tag("->"), parse_type), multispace0),
+                delimited(multispace0, parse_block, multispace0),
+            ),
         )),
         multispace0,
     )(input)?;
-
     Ok((substring, Expr::Func(Box::new(func_name), params, block)))
 }
 

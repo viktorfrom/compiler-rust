@@ -57,6 +57,7 @@ pub mod expr_tree {
         Integer,
         Bool,
         Str,
+        Void,
     }
 }
 
@@ -98,5 +99,6 @@ pub mod content_tree {
         Integer,
         Bool,
         Str,
+        Void,
     }
 }

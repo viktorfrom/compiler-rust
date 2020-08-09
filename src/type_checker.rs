@@ -52,6 +52,7 @@ fn type_expr(input: Expr) -> Content {
             Type::Integer => Content::ContentOp(ContentOp::Integer),
             Type::Bool => Content::ContentOp(ContentOp::Bool),
             Type::Str => Content::ContentOp(ContentOp::Str),
+            Type::Void => Content::ContentOp(ContentOp::Void),
         },
 
         Expr::Return(return_param, var) => match *var {
