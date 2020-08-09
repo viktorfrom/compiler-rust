@@ -106,6 +106,11 @@ fn type_if_while(if_param: Content, block: Vec<Expr>) -> Content {
     match if_param {
         Content::Bool(true) => type_block(block),
         Content::Bool(false) => Content::Null,
+        Content::Str(s) => match read_from_var(&s.to_string()) {
+            Content::Bool(true) => type_block(block),
+            _ => Content::Null,
+
+        },
         _ => (panic!("Invalid input!")),
     }
 }

@@ -47,6 +47,7 @@ pub fn insert_var(var: Content, val: Content) -> Content {
 
 pub fn read_from_var(var: &str) -> Content {
     let map = MEMORY.lock().unwrap();
+    // println!("map = {:#?}", map);
 
     match map.get(&var) {
         Some(var) => match var {

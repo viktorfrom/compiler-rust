@@ -53,6 +53,7 @@ fn eval_expr(input: Expr) -> Content {
             Type::Integer => Content::ContentOp(ContentOp::Integer),
             Type::Bool => Content::ContentOp(ContentOp::Bool),
             Type::Str => Content::ContentOp(ContentOp::Str),
+            Type::Void => Content::ContentOp(ContentOp::Void),
         },
 
         Expr::Return(return_param, var) => match *var {
@@ -105,6 +106,11 @@ fn eval_if_while(if_param: Content, block: Vec<Expr>) -> Content {
     match if_param {
         Content::Bool(true) => eval_block(block),
         Content::Bool(false) => Content::Null,
+        Content::Str(s) => match read_from_var(&s.to_string()) {
+            Content::Bool(true) => eval_block(block),
+            _ => Content::Null,
+
+        },
         _ => (panic!("Invalid input!")),
     }
 }
@@ -169,7 +175,6 @@ fn eval_return(return_param: &str, var: &str) -> Content {
     );
 
     let value = read_from_var(var);
-    println!("test = {:#?}", return_param);
     return Content::Return(var.to_string(), Box::new(value));
 }
 
