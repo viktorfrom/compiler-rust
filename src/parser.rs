@@ -193,8 +193,6 @@ fn parse_if(input: &str) -> IResult<&str, Expr> {
         multispace0,
     )(input)?;
 
-    println!("expr = {:#?}, block = {:#?}", expr, block);
-
     Ok((substring, Expr::If(Box::new(expr), block)))
 }
 

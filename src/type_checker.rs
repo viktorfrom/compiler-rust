@@ -24,7 +24,7 @@ fn type_expr(input: Expr) -> Content {
     match input {
         Expr::Num(_) => Content::Num(0),
         Expr::Bool(_) => Content::Bool(false),
-        Expr::Str(_) => Content::Str("string".to_string()),
+        Expr::Str(s) => Content::Str(s),
 
         Expr::ArithOp(op) => match op {
             ArithOp::Add => Content::ContentOp(ContentOp::Add),
@@ -109,7 +109,6 @@ fn type_if_while(if_param: Content, block: Vec<Expr>) -> Content {
         Content::Str(s) => match read_from_var(&s.to_string()) {
             Content::Bool(true) => type_block(block),
             _ => Content::Null,
-
         },
         _ => (panic!("Invalid input!")),
     }
@@ -175,7 +174,6 @@ fn type_return(return_param: &str, var: &str) -> Content {
     );
 
     let value = read_from_var(var);
-    println!("test = {:#?}", return_param);
     return Content::Return(var.to_string(), Box::new(value));
 }
 

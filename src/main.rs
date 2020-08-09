@@ -15,15 +15,14 @@ use crate::type_checker::*;
 
 fn main() {
     let program1 = " 
-        fn main() -> () {
+        fn main() -> i32 {
             let a: i32 = 1;
             let b: i32  = a;
 
             let c: i32 = b;
             return c;
 
-        };"
-    ;
+        };";
 
     let program2 = " 
         pub fn testfn(b:i32) -> i32 {
@@ -31,8 +30,7 @@ fn main() {
         };
 
         let a = testfn(3);
-        "
-    ;
+        ";
 
     let program3 = "     
         pub fn testfn() -> i32 {
@@ -43,16 +41,20 @@ fn main() {
         };
 
         let a = testfn();
-        "
-    ;
+        ";
 
-    let tree = parse_expr(program3).unwrap().1;
+    let tree = parse_expr(program1).unwrap().1;
     // println!("Tree = {:#?}", tree);
 
     if type_scope(tree.clone()) {
-        // compiler(tree).ok();
-        // println!("Type checker passed!");
-        let expr = eval_scope(tree.clone());
-        println!("Eval = {:#?}", expr);
+        println!("Type checker passed!");
+        // let expr = eval_scope(tree.clone());
+        match compiler(tree.clone()) {
+            Ok(_) => (),
+            Err(error) => panic!("-- {}", error),
+        }
+    //println!("{:#?}", interpreter::run(ast.clone()));
+    } else {
+        panic!("ERROR: Typechecker failed!");
     }
 }

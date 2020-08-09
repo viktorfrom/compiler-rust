@@ -109,7 +109,6 @@ fn eval_if_while(if_param: Content, block: Vec<Expr>) -> Content {
         Content::Str(s) => match read_from_var(&s.to_string()) {
             Content::Bool(true) => eval_block(block),
             _ => Content::Null,
-
         },
         _ => (panic!("Invalid input!")),
     }
@@ -157,12 +156,12 @@ fn eval_func_input(var: Content, func_name: &str, args: Vec<Expr>) -> Content {
     let result = eval_block(block);
     let var_name = match var {
         Content::Str(var) => var,
-        _ => panic!("err1"),
+        _ => panic!("Error: Invalid block input!"),
     };
 
     let value = match result {
         Content::Return(_, var) => var,
-        _ => panic!("err1"),
+        _ => panic!("Error: Block result not found!"),
     };
 
     return Content::Return(var_name.to_string(), value);

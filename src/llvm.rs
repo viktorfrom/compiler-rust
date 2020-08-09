@@ -25,6 +25,27 @@ struct CodeGen<'ctx> {
 }
 
 impl<'ctx> CodeGen<'ctx> {
+    #[inline]
+    fn get_function(&self, name: &str) -> Option<FunctionValue> {
+        self.module.get_function(name)
+    }
+
+    #[inline]
+    fn get_variable(&self, name: &str) -> &PointerValue {
+        match self.variables.get(name) {
+            Some(var) => var,
+            None => panic!(
+                "Could not find a matching variable, {} in {:?}",
+                name, self.variables
+            ),
+        }
+    }
+
+    #[inline]
+    fn fn_value(&self) -> FunctionValue {
+        self.fn_value_opt.unwrap()
+    }
+
     fn codegen_num(&mut self, num: i32) -> IntValue {
         self.context.i32_type().const_int(num as u64, false)
     }
@@ -36,8 +57,34 @@ impl<'ctx> CodeGen<'ctx> {
         }
     }
 
+    fn codegen_block(&mut self, block: Vec<Expr>) {}
+
     fn codegen_scope(&mut self, scope: Expr) -> Result<(), Box<Error>> {
-        println!("scope = {:#?}", scope);
+        println!("sc = {:#?}", scope);
+
+        let fn_name: String;
+        let fn_params: Vec<Expr>;
+        let fn_block: Vec<Expr>;
+
+        match scope {
+            Expr::Func(func_name, params, block) => match *func_name {
+                Expr::Str(func_name) => {
+                    fn_name = func_name.to_string();
+                    fn_params = params;
+                    fn_block = block;
+                }
+                _ => panic!("Invalid Input!"),
+            },
+            _ => panic!("ERROR: Can't find function head"),
+        }
+
+        // let u32_type = codegen.context.i32_type();
+        // let fn_type = u32_type.fn_type(&[], false);
+        // let function = codegen.module.add_function(&*fn_name, fn_type, None);
+        // let basic_block = codegen.context.append_basic_block(function, "entry");
+        // codegen.builder.position_at_end(basic_block);
+
+        // codegen.codegen_block(fn_block);
 
         Ok(())
     }
@@ -45,31 +92,33 @@ impl<'ctx> CodeGen<'ctx> {
 
 pub fn compiler(tree: Vec<Expr>) -> Result<(), Box<dyn Error>> {
     let context = Context::create();
-    let module = context.create_module("sum");
+    let module = context.create_module("llvm-program");
     let execution_engine = module.create_jit_execution_engine(OptimizationLevel::None)?;
     let mut codegen = CodeGen {
         context: &context,
-        module,
+        module: module,
         builder: context.create_builder(),
-        execution_engine,
+        execution_engine: execution_engine,
         fn_value_opt: None,
         variables: HashMap::new(),
     };
 
     for scope in tree {
-        codegen.codegen_scope(scope);
+        codegen.codegen_scope(scope)?;
     }
 
-    // let sum = codegen.jit_compile_sum().ok_or("Unable to JIT compile `sum`")?;
+    codegen.module.print_to_stderr();
+    let fun_expr: JitFunction<ExprFunc> = unsafe {
+        codegen
+            .execution_engine
+            .get_function("testfn")
+            .ok()
+            .unwrap()
+    };
 
-    // let x = 1u64;
-    // let y = 2u64;
-    // let z = 3u64;
-
-    // unsafe {
-    //     println!("{} + {} + {} = {}", x, y, z, sum.call(x, y, z));
-    //     assert_eq!(sum.call(x, y, z), x + y + z);
-    // }
+    unsafe {
+        println!("{}", fun_expr.call());
+    }
 
     Ok(())
 }
