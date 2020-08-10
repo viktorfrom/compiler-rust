@@ -48,7 +48,7 @@ fn main() {
 
     if type_scope(tree.clone()) {
         println!("Type checker passed!");
-        llvmmain();
+        compiler(tree);
         // let expr = eval_scope(tree.clone());
         //println!("{:#?}", interpreter::run(ast.clone()));
     } else {
