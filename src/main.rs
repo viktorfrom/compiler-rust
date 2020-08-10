@@ -48,12 +48,9 @@ fn main() {
 
     if type_scope(tree.clone()) {
         println!("Type checker passed!");
+        llvmmain();
         // let expr = eval_scope(tree.clone());
-        match compiler(tree.clone()) {
-            Ok(_) => (),
-            Err(error) => panic!("-- {}", error),
-        }
-    //println!("{:#?}", interpreter::run(ast.clone()));
+        //println!("{:#?}", interpreter::run(ast.clone()));
     } else {
         panic!("ERROR: Typechecker failed!");
     }
