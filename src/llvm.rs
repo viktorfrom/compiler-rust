@@ -25,6 +25,13 @@ struct CodeGen<'ctx> {
 }
 
 impl<'ctx> CodeGen<'ctx> {
+    // pub fn new(
+    // ) -> Self {
+    //     Self {
+    //         context: Context::create(),
+    //     }
+    // }
+
     #[inline]
     fn get_function(&self, name: &str) -> Option<FunctionValue> {
         self.module.get_function(name)
@@ -58,66 +65,58 @@ impl<'ctx> CodeGen<'ctx> {
     }
 
     fn codegen_block(&mut self, block: Vec<Expr>) {}
+}
 
-    fn codegen_scope(&mut self, scope: Expr) -> Result<(), Box<Error>> {
-        println!("sc = {:#?}", scope);
+fn compile_scope(
+    context: &Context,
+    module: &Module,
+    builder: &Builder,
+    execution_engine: &ExecutionEngine,
+    scope: Expr,
+) -> Result<(), Box<Error>> {
+    let fn_name: String;
+    let fn_params: Vec<Expr>;
+    let fn_block: Vec<Expr>;
 
-        let fn_name: String;
-        let fn_params: Vec<Expr>;
-        let fn_block: Vec<Expr>;
-
-        match scope {
-            Expr::Func(func_name, params, block) => match *func_name {
-                Expr::Str(func_name) => {
-                    fn_name = func_name.to_string();
-                    fn_params = params;
-                    fn_block = block;
-                }
-                _ => panic!("Invalid Input!"),
-            },
-            _ => panic!("ERROR: Can't find function head"),
-        }
-
-        // let u32_type = codegen.context.i32_type();
-        // let fn_type = u32_type.fn_type(&[], false);
-        // let function = codegen.module.add_function(&*fn_name, fn_type, None);
-        // let basic_block = codegen.context.append_basic_block(function, "entry");
-        // codegen.builder.position_at_end(basic_block);
-
-        // codegen.codegen_block(fn_block);
-
-        Ok(())
+    match scope {
+        Expr::Func(func_name, params, block) => match *func_name {
+            Expr::Str(func_name) => {
+                fn_name = func_name.to_string();
+                fn_params = params;
+                fn_block = block;
+            }
+            _ => panic!("Invalid Input!"),
+        },
+        _ => panic!("ERROR: Can't find function head"),
     }
+
+        let u32_type = context.i32_type();
+        let fn_type = u32_type.fn_type(&[], false);
+        // let function = module.add_function(&fn_name.to_string(), fn_type, None);
+        // let basic_block = context.append_basic_block(function, "entry");
+        // builder.position_at_end(basic_block);
+
+    Ok(())
+
 }
 
 pub fn compiler(tree: Vec<Expr>) -> Result<(), Box<dyn Error>> {
     let context = Context::create();
-    let module = context.create_module("llvm-program");
+    let module = context.create_module("sum");
+    let builder = context.create_builder();
     let execution_engine = module.create_jit_execution_engine(OptimizationLevel::None)?;
-    let mut codegen = CodeGen {
-        context: &context,
-        module: module,
-        builder: context.create_builder(),
-        execution_engine: execution_engine,
-        fn_value_opt: None,
-        variables: HashMap::new(),
-    };
 
-    for scope in tree {
-        codegen.codegen_scope(scope)?;
+    match module.create_jit_execution_engine(OptimizationLevel::None){
+        Ok(e) => execution_engine = e,
+        Err(err) => panic!("ERROR: can't init LLVM: {:?}", err),
     }
 
-    codegen.module.print_to_stderr();
-    let fun_expr: JitFunction<ExprFunc> = unsafe {
-        codegen
-            .execution_engine
-            .get_function("testfn")
-            .ok()
-            .unwrap()
-    };
-
-    unsafe {
-        println!("{}", fun_expr.call());
+    for scope in tree {
+        compile_scope(
+            &context, 
+            &module, &builder, &execution_engine,
+            scope,
+        )?;
     }
 
     Ok(())
