@@ -127,21 +127,43 @@ fn parse_paren(input: &str) -> IResult<&str, Expr> {
     )(input)
 }
 
+// pub fn parse_block(input: &str) -> IResult<&str, Vec<Expr>> {
+//     delimited(
+//         alt((tag("{"), multispace0)),
+//         many0(alt((
+//             parse_return,
+//             delimited(
+//                 multispace0,
+//                 terminated(
+//                     alt((parse_let, parse_let_func, parse_func, parse_if)),
+//                     tag(";"),
+//                 ),
+//                 terminated(tag(";"), multispace0),
+//             ),
+//         ))),
+//         alt((tag("}"), multispace0)),
+//     )(input)
+// }
+
 fn parse_block(input: &str) -> IResult<&str, Vec<Expr>> {
     delimited(
-        alt((tag("{"), multispace0)),
+        tag("{"),
         many0(alt((
-            parse_return,
-            delimited(
-                multispace0,
-                terminated(
-                    alt((parse_let, parse_let_func, parse_func, parse_if)),
-                    tag(";"),
-                ),
+            terminated(
+                alt((
+                    parse_func,
+                    parse_let_func,
+                    parse_let,
+                    parse_return,
+                    parse_if,
+                    // parse_right_expr, // TODO: This should probably not be here 
+                    parse_while,
+                )),
                 terminated(tag(";"), multispace0),
             ),
+            parse_return,
         ))),
-        alt((tag("}"), multispace0)),
+        tag("}"),
     )(input)
 }
 
@@ -247,26 +269,22 @@ fn parse_let_func(input: &str) -> IResult<&str, Expr> {
     ))
 }
 
-fn parse_func(input: &str) -> IResult<&str, Expr> {
-    let (substring, (func_name, params, block)) = delimited(
-        delimited(
-            multispace0,
-            alt((
-                tag("fn"),
-                preceded(tag("pub"), preceded(multispace0, tag("fn"))),
-            )),
-            multispace0,
-        ),
+pub fn parse_func(input: &str) -> IResult<&str, Expr> {
+    let (substring, (func_name, params, _, block)) = delimited(
+        multispace0,
         tuple((
-            parse_var,
-            delimited(multispace0, parse_param, multispace0),
-            preceded(
-                delimited(multispace0, preceded(tag("->"), parse_type), multispace0),
-                delimited(multispace0, parse_block, multispace0),
-            ),
+            delimited(multispace0, preceded(tag("fn"), parse_var), multispace0),
+            parse_param,
+            delimited(multispace0, preceded(tag("->"), parse_type), multispace0),
+            parse_block,
         )),
         multispace0,
     )(input)?;
+
+    // println!("a, {:#?}b, {:#?}c, {:#?}d, {:#?}", func_name, params, asd, block);
+    // println!("substring, {:#?}", substring);
+
+    // Ok(("", Expr::Num(1)))
     Ok((substring, Expr::Func(Box::new(func_name), params, block)))
 }
 
