@@ -21,8 +21,10 @@ fn main() {
 
             let c: i32 = b;
             return c;
+        };
 
-        };";
+        let a = testfn();
+        ";
 
     let program2 = " 
         fn testfn(b:i32) -> i32 {
@@ -46,14 +48,16 @@ fn main() {
 
 
     let tree = parse_expr(program3).unwrap().1;
-    println!("Tree = {:#?}", tree);
+    // println!("Tree = {:#?}", tree);
     let expr = eval_scope(tree.clone());
     println!("eval = {:#?}", expr);
 
-    // if type_scope(tree.clone()) {
-    //     println!("Type checker passed!");
-    //     compiler(tree);
-    // } else {
-    //     panic!("ERROR: Typechecker failed!");
-    // }
+    if type_scope(tree.clone()) {
+        // println!("Type checker passed!");
+        let expr = eval_scope(tree.clone());
+        println!("eval = {:#?}", expr);
+        // compiler(tree);
+    } else {
+        panic!("ERROR: Typechecker failed!");
+    }
 }

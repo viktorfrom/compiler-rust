@@ -152,19 +152,25 @@ fn type_func_input(var: Content, func_name: &str, args: Vec<Expr>) -> Content {
     let params = func_content[0].clone();
     let block = func_content[1].clone();
 
+    println!("var {:#?}", var);
+    println!("params {:#?}", params);
+    println!("block {:#?}", block);
+
     type_params(params, args);
     let result = type_block(block);
     let var_name = match var {
         Content::Str(var) => var,
-        _ => panic!("err1"),
+        _ => panic!("Error: Could not match str from var '{:?}'", var),
     };
 
-    let value = match result {
-        Content::Return(_, var) => var,
-        _ => panic!("err1"),
+    let _value = match result {
+        // Content::Return(_, var) => var,
+        // _ => panic!("Error: Invalid block input!"),
+        _ => (),
     };
 
-    return Content::Return(var_name.to_string(), value);
+    return Content::Return(var_name.to_string(), Box::new(Content::Num(0)));
+
 }
 
 fn type_return(return_param: &str, var: &str) -> Content {
