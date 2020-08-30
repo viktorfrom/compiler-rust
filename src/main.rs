@@ -46,17 +46,14 @@ fn main() {
         let a = testfn();
         ";
 
-
-    let tree = parse_expr(program3).unwrap().1;
+    let tree = parse_expr(program1).unwrap().1;
     // println!("Tree = {:#?}", tree);
-    let expr = eval_scope(tree.clone());
-    println!("eval = {:#?}", expr);
 
     if type_scope(tree.clone()) {
         // println!("Type checker passed!");
-        let expr = eval_scope(tree.clone());
-        println!("eval = {:#?}", expr);
-        // compiler(tree);
+        // let expr = eval_scope(tree.clone());
+        // println!("eval = {:#?}", expr);
+        compiler(tree);
     } else {
         panic!("ERROR: Typechecker failed!");
     }

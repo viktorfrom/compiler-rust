@@ -1,7 +1,5 @@
 extern crate nom;
-
 use crate::ast::expr_tree::*;
-
 use nom::{
     branch::alt,
     bytes::complete::tag,
@@ -127,24 +125,6 @@ fn parse_paren(input: &str) -> IResult<&str, Expr> {
     )(input)
 }
 
-// pub fn parse_block(input: &str) -> IResult<&str, Vec<Expr>> {
-//     delimited(
-//         alt((tag("{"), multispace0)),
-//         many0(alt((
-//             parse_return,
-//             delimited(
-//                 multispace0,
-//                 terminated(
-//                     alt((parse_let, parse_let_func, parse_func, parse_if)),
-//                     tag(";"),
-//                 ),
-//                 terminated(tag(";"), multispace0),
-//             ),
-//         ))),
-//         alt((tag("}"), multispace0)),
-//     )(input)
-// }
-
 fn parse_block(input: &str) -> IResult<&str, Vec<Expr>> {
     delimited(
         tag("{"),
@@ -156,7 +136,7 @@ fn parse_block(input: &str) -> IResult<&str, Vec<Expr>> {
                     parse_let,
                     parse_return,
                     parse_if,
-                    // parse_right_expr, // TODO: This should probably not be here 
+                    // parse_right_expr, // TODO: This should probably not be here
                     parse_while,
                 )),
                 terminated(tag(";"), multispace0),
@@ -269,7 +249,7 @@ fn parse_let_func(input: &str) -> IResult<&str, Expr> {
     ))
 }
 
-pub fn parse_func(input: &str) -> IResult<&str, Expr> {
+fn parse_func(input: &str) -> IResult<&str, Expr> {
     let (substring, (func_name, params, _, block)) = delimited(
         multispace0,
         tuple((
@@ -281,10 +261,6 @@ pub fn parse_func(input: &str) -> IResult<&str, Expr> {
         multispace0,
     )(input)?;
 
-    // println!("a, {:#?}b, {:#?}c, {:#?}d, {:#?}", func_name, params, asd, block);
-    // println!("substring, {:#?}", substring);
-
-    // Ok(("", Expr::Num(1)))
     Ok((substring, Expr::Func(Box::new(func_name), params, block)))
 }
 

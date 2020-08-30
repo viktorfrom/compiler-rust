@@ -1,6 +1,5 @@
 use crate::ast::content_tree::*;
 use crate::ast::expr_tree::*;
-
 use crate::memory::*;
 
 pub fn eval_scope(scope: Vec<Expr>) -> Content {
