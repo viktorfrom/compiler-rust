@@ -49,6 +49,8 @@ pub struct Compiler<'ctx> {
 impl<'ctx> Compiler<'ctx> {
 
     pub fn compile_expr(&self, expr: &Expr) -> (InstructionValue, bool) {
+        println!("test  = {:#?}", expr);
+
         match expr {
             // Expr::Num(i) => (self.context.i32_type().const_int(i as u64, false), false),
 
