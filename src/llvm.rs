@@ -11,10 +11,11 @@ use self::inkwell::{
     passes::PassManager,
     types::BasicTypeEnum,
     values::{
-        BasicValue, BasicValueEnum, FloatValue, FunctionValue, InstructionValue, PointerValue,
+        BasicValue, BasicValueEnum, FloatValue, FunctionValue, InstructionValue, PointerValue, IntValue,
     },
     FloatPredicate, OptimizationLevel,
 };
+
 
 use std::{
     borrow::Borrow,
@@ -46,10 +47,52 @@ pub struct Compiler<'ctx> {
 }
 
 impl<'ctx> Compiler<'ctx> {
-    pub fn compile_block(&mut self, expr: Vec<Expr>) -> InstructionValue {
+
+    pub fn compile_expr(&self, expr: &Expr) -> (InstructionValue, bool) {
         match expr {
-            _ => panic!("asd"),
+            // Expr::Num(i) => (self.context.i32_type().const_int(i as u64, false), false),
+
+
+            // Expr::Num(i) => self.compile_num(i),
+            // Expr::Bool(b) => self.compile_bool(b),
+
+            // _ => panic!("rip"),
+            _ => panic!("expr = {:#?}", expr),
+        } 
+    }
+
+    fn compile_bool(&self, b: bool) -> IntValue{
+        match b {
+            true => self.context.bool_type().const_int(1, false),
+            false => self.context.bool_type().const_int(0, false)
         }
+    }
+
+    fn compile_num(&self, num: i32) -> IntValue{
+        self.context.i32_type().const_int(num as u64, false)
+    }
+
+    pub fn compile_block(&self, block: Vec<Expr>) -> InstructionValue  {
+        println!("asdads = {:#?}", block);
+        let mut res: Option<InstructionValue> = None;
+        let mut last_cmd: Option<InstructionValue> = None;
+        for expr in block.iter() {
+            let (cmd, ret) = self.compile_expr(expr);
+            if ret {
+                return cmd;
+            }
+            last_cmd = Some(cmd);
+        }
+
+        match last_cmd {
+            Some(instruction) => instruction,
+            None => panic!(),
+        }
+        // for expr in block.iter() {
+        //     self.compile_expr(expr.clone());
+        // }
+
+        // return ()
     }
 }
 
@@ -86,7 +129,7 @@ pub fn compiler(tree: Vec<Expr>) -> Result<(), Box<dyn Error>> {
             },
             _ => continue,
         }
-        println!("name {:#?}, block {:#?}", fn_name, fn_block);
+        // println!("name {:#?}, block {:#?}", fn_name, fn_block);
 
         let u32_type = context.i32_type();
         let fn_type = u32_type.fn_type(&[], false);

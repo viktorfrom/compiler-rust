@@ -46,7 +46,13 @@ fn main() {
         let a = testfn();
         ";
 
-    let tree = parse_expr(program1).unwrap().1;
+    let test = " 
+        fn testfn() -> () {
+            return 1;
+        };
+        ";
+
+    let tree = parse_expr(test).unwrap().1;
     // println!("Tree = {:#?}", tree);
 
     if type_scope(tree.clone()) {
