@@ -47,22 +47,93 @@ pub struct Compiler<'ctx> {
 }
 
 impl<'ctx> Compiler<'ctx> {
+    #[inline]
+    fn get_variable(&self, name: &str) -> &PointerValue{
+        match self.variables.get(name) {
+            Some(var) => var,
+            None => panic!("ERROR: Can't find matching variable")
+        }
+    }
 
-    pub fn compile_expr(&self, expr: &Expr) -> (InstructionValue, bool) {
+    #[inline]
+    fn fn_value(&self) -> FunctionValue {
+        self.fn_value_opt.unwrap()
+    }
+
+    fn create_entry_block_alloca(&mut self, name: &str) -> PointerValue {
+        let builder = self.context.create_builder();
+
+        let entry = self.fn_value().get_first_basic_block().unwrap();
+
+        match entry.get_first_instruction() {
+            Some(first_instr) => builder.position_before(&first_instr),
+            None => builder.position_at_end(entry),
+        }
+        
+        let alloca = builder.build_alloca(self.context.i32_type(), name);
+        self.variables.insert(name.to_string(), alloca);
+        alloca
+    }
+
+    pub fn compile_keyword(&self, expr: &Expr) -> (InstructionValue, bool) {
         println!("test  = {:#?}", expr);
+        match expr.clone() {
+            // Expr::Let(left, operator, right) => match *left {
+            //     Expr::Str(left) => {
 
-        match expr {
-            // Expr::Num(i) => (self.context.i32_type().const_int(i as u64, false), false),
+            //             let alloca = self.create_entry_block_alloca(&left);
+            //             let expr = self.match_node(*right);
+            //             let store = self.builder.build_store(alloca, expr);
+                        
 
-
-            // Expr::Num(i) => self.compile_num(i),
-            // Expr::Bool(b) => self.compile_bool(b),
-
-            // _ => panic!("rip"),
-            _ => panic!("expr = {:#?}", expr),
+            //         (store, false)
+            //     }
+            //         // eval_expr(Expr::Str(left)),
+            //         // eval_expr(*operator),
+            //         // eval_expr(*right),
+            //     _ => panic!("wops"),
+            // },
+            _ => panic!("wops"),
         } 
     }
 
+    fn compile_expr(&self, expr: Expr) -> IntValue {
+        match expr.clone() {
+            Expr::Str(var) => {
+                let val = self.get_variable(&var);
+                self.builder.build_load(*val, &var).into_int_value()
+            }
+            Expr::Num(i) => self.compile_num(i),
+            Expr::Bool(b) => {
+                if b {
+                    self.context.bool_type().const_int(1, false)
+                } else {
+                    self.context.bool_type().const_int(0, false)
+                }
+            }
+            // Expr::BinOp(l, op, r) => self.compile_bin_op(*l, op, *r),
+            // Expr::FuncCall(fn_call) => self.compile_function_call(fn_call),
+            _ => unimplemented!(),
+        }
+    }
+
+    fn match_node(&self, expr: Expr) -> IntValue{
+        match expr{
+            Expr::Str(name) => {
+                let var = self.get_variable(&name);
+                self.builder.build_load(*var, &name).into_int_value()
+            }
+            Expr::Num(num) => self.compile_num(num),
+            
+            Expr::Bool(b) => self.compile_bool(b),
+
+
+            
+            _ => panic!("ERROR: Can't match node")
+        }
+    }
+
+    
     fn compile_bool(&self, b: bool) -> IntValue{
         match b {
             true => self.context.bool_type().const_int(1, false),
@@ -74,12 +145,11 @@ impl<'ctx> Compiler<'ctx> {
         self.context.i32_type().const_int(num as u64, false)
     }
 
-    pub fn compile_block(&self, block: Vec<Expr>) -> InstructionValue  {
-        println!("asdads = {:#?}", block);
-        let mut res: Option<InstructionValue> = None;
+    pub fn compile_block(&self, block: Vec<Expr>) -> InstructionValue {
+        // let mut res: Option<InstructionValue> = None;
         let mut last_cmd: Option<InstructionValue> = None;
         for expr in block.iter() {
-            let (cmd, ret) = self.compile_expr(expr);
+            let (cmd, ret) = self.compile_keyword(expr);
             if ret {
                 return cmd;
             }
@@ -90,11 +160,6 @@ impl<'ctx> Compiler<'ctx> {
             Some(instruction) => instruction,
             None => panic!(),
         }
-        // for expr in block.iter() {
-        //     self.compile_expr(expr.clone());
-        // }
-
-        // return ()
     }
 }
 
