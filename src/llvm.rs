@@ -36,17 +36,29 @@ type ExprFunc = unsafe extern "C" fn() -> i32;
 // ======================================================================================
 
 /// Defines the `Expr` compiler.
-pub struct Compiler<'ctx> {
+pub struct Compiler<'a, 'ctx> {
     pub context: &'ctx Context,
-    pub builder: Builder<'ctx>,
-    pub module: Module<'ctx>,
-    execution_engine: ExecutionEngine<'ctx>,
+    pub builder: &'a Builder<'ctx>,
+    // pub fpm: &'a PassManager<FunctionValue<'ctx>>,
+    pub module: &'a Module<'ctx>,
+    pub execution_engine: &'a ExecutionEngine<'ctx>,
+    pub fn_value_opt: Option<FunctionValue<'ctx>>,
 
     variables: HashMap<String, PointerValue<'ctx>>,
-    fn_value_opt: Option<FunctionValue<'ctx>>,
 }
 
-impl<'ctx> Compiler<'ctx> {
+impl<'a, 'ctx> Compiler<'a, 'ctx> {
+    #[inline]
+    fn get_function(&self, name: &str) -> Option<FunctionValue<'ctx>> {
+        self.module.get_function(name)
+    }
+
+    /// Returns the `FunctionValue` representing the function being compiled.
+    #[inline]
+    fn fn_value(&self) -> FunctionValue<'ctx> {
+        self.fn_value_opt.unwrap()
+    }
+
     #[inline]
     fn get_variable(&self, name: &str) -> &PointerValue{
         match self.variables.get(name) {
@@ -55,45 +67,39 @@ impl<'ctx> Compiler<'ctx> {
         }
     }
 
-    #[inline]
-    fn fn_value(&self) -> FunctionValue {
-        self.fn_value_opt.unwrap()
-    }
-
-    fn create_entry_block_alloca(&mut self, name: &str) -> PointerValue {
+    /// Creates a new stack allocation instruction in the entry block of the function.
+    fn create_entry_block_alloca(&self, name: &str) -> PointerValue<'ctx> {
         let builder = self.context.create_builder();
 
         let entry = self.fn_value().get_first_basic_block().unwrap();
 
         match entry.get_first_instruction() {
             Some(first_instr) => builder.position_before(&first_instr),
-            None => builder.position_at_end(entry),
+            None => builder.position_at_end(entry)
         }
-        
-        let alloca = builder.build_alloca(self.context.i32_type(), name);
-        self.variables.insert(name.to_string(), alloca);
-        alloca
+
+        builder.build_alloca(self.context.f64_type(), name)
     }
 
-    pub fn compile_keyword(&self, expr: &Expr) -> (InstructionValue, bool) {
+    fn compile_keyword(&self, expr: &Expr) -> (InstructionValue, bool) {
         println!("test  = {:#?}", expr);
         match expr.clone() {
-            // Expr::Let(left, operator, right) => match *left {
-            //     Expr::Str(left) => {
+            Expr::Let(left, operator, right) => match *left {
+                Expr::Str(left) => {
 
-            //             let alloca = self.create_entry_block_alloca(&left);
-            //             let expr = self.match_node(*right);
-            //             let store = self.builder.build_store(alloca, expr);
+                    let alloca = self.create_entry_block_alloca(&left);
+                    let expr = self.match_node(*right);
+                    let store = self.builder.build_store(alloca, expr);
                         
 
-            //         (store, false)
-            //     }
-            //         // eval_expr(Expr::Str(left)),
-            //         // eval_expr(*operator),
-            //         // eval_expr(*right),
-            //     _ => panic!("wops"),
-            // },
-            _ => panic!("wops"),
+                    (store, false)
+                }
+                    // eval_expr(Expr::Str(left)),
+                    // eval_expr(*operator),
+                    // eval_expr(*right),
+                _ => panic!("asd"),
+            },
+            _ => panic!("asd"),
         } 
     }
 
@@ -145,7 +151,7 @@ impl<'ctx> Compiler<'ctx> {
         self.context.i32_type().const_int(num as u64, false)
     }
 
-    pub fn compile_block(&self, block: Vec<Expr>) -> InstructionValue {
+    fn compile_block(&mut self, block: Vec<Expr>) -> InstructionValue {
         // let mut res: Option<InstructionValue> = None;
         let mut last_cmd: Option<InstructionValue> = None;
         for expr in block.iter() {
@@ -164,16 +170,32 @@ impl<'ctx> Compiler<'ctx> {
 }
 
 pub fn compiler(tree: Vec<Expr>) -> Result<(), Box<dyn Error>> {
-    let context = Context::create();
-    let module = context.create_module("sum");
-    let execution_engine = module.create_jit_execution_engine(OptimizationLevel::None)?;
-    let builder = context.create_builder();
+    // let context = Context::create();
+    // let mut module = context.create_module("sum");
+    // let execution_engine = module.create_jit_execution_engine(OptimizationLevel::None)?;
+    // let builder = context.create_builder();
 
-    let mut codegen = Compiler {
+    // let mut codegen = Compiler {
+    //     context: &context,
+    //     module: &module,
+    //     builder: &builder,
+    //     execution_engine: &execution_engine,
+    //     fn_value_opt: None,
+    //     variables: HashMap::new(),
+    // };
+
+    let context = Context::create();
+    let module = context.create_module("llvm-program");
+    let builder = context.create_builder();
+    let execution_engine = module
+        .create_jit_execution_engine(OptimizationLevel::None)
+        .unwrap();
+
+    let mut compiler = Compiler {
         context: &context,
-        module: module,
-        builder: builder,
-        execution_engine: execution_engine,
+        builder: &builder,
+        module: &module,
+        execution_engine: &execution_engine,
         fn_value_opt: None,
         variables: HashMap::new(),
     };
@@ -200,11 +222,11 @@ pub fn compiler(tree: Vec<Expr>) -> Result<(), Box<dyn Error>> {
 
         let u32_type = context.i32_type();
         let fn_type = u32_type.fn_type(&[], false);
-        let function = codegen.module.add_function(&*fn_name, fn_type, None);
+        let function = compiler.module.add_function(&*fn_name, fn_type, None);
         let basic_block = context.append_basic_block(function, "entry");
 
-        codegen.builder.position_at_end(basic_block);
-        codegen.compile_block(fn_block);
+        compiler.builder.position_at_end(basic_block);
+        compiler.compile_block(fn_block);
     }
 
     // codegen.module.print_to_stderr();
