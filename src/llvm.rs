@@ -3,7 +3,6 @@ use crate::memory::*;
 
 extern crate inkwell;
 
-    use inkwell::IntPredicate;
 use self::inkwell::{
     builder::Builder,
     context::Context,
@@ -12,11 +11,11 @@ use self::inkwell::{
     passes::PassManager,
     types::BasicTypeEnum,
     values::{
-        BasicValue, BasicValueEnum, FloatValue, FunctionValue, InstructionValue, PointerValue, IntValue,
+        BasicValue, BasicValueEnum, FloatValue, FunctionValue, InstructionValue, IntValue,
+        PointerValue,
     },
-    FloatPredicate, OptimizationLevel,
+    FloatPredicate, IntPredicate, OptimizationLevel,
 };
-
 
 use std::{
     borrow::Borrow,
@@ -28,8 +27,6 @@ use std::{
     str::Chars,
 };
 
-// const ANONYMOUS_FUNCTION_NAME: &str = "anonymous";
-// type SumFunc = unsafe extern "C" fn(u64, u64, u64) -> u64;
 type ExprFunc = unsafe extern "C" fn() -> i32;
 
 // ======================================================================================
@@ -40,7 +37,6 @@ type ExprFunc = unsafe extern "C" fn() -> i32;
 pub struct Compiler<'a, 'ctx> {
     pub context: &'ctx Context,
     pub builder: &'a Builder<'ctx>,
-    // pub fpm: &'a PassManager<FunctionValue<'ctx>>,
     pub module: &'a Module<'ctx>,
     pub execution_engine: &'a ExecutionEngine<'ctx>,
     pub fn_value_opt: Option<FunctionValue<'ctx>>,
@@ -62,23 +58,22 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
     }
 
     #[inline]
-    fn get_variable(&self, name: &str) -> &PointerValue{
+    fn get_variable(&self, name: &str) -> &PointerValue {
         match self.variables.get(name) {
             Some(var) => var,
-            None => panic!("ERROR: Can't find matching variable")
+            None => panic!("ERROR: Can't find matching variable"),
         }
     }
 
     /// Creates a new stack allocation instruction in the entry block of the function.
     fn create_entry_block_alloca(&self, name: &str) -> PointerValue<'ctx> {
-        println!("asd här?????");
         let builder = self.context.create_builder();
 
         let entry = self.fn_value().get_first_basic_block().unwrap();
 
         match entry.get_first_instruction() {
             Some(first_instr) => builder.position_before(&first_instr),
-            None => builder.position_at_end(entry)
+            None => builder.position_at_end(entry),
         }
 
         builder.build_alloca(self.context.f64_type(), name)
@@ -92,21 +87,19 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
                     let alloca = self.create_entry_block_alloca(&left);
                     let expr = self.compile_expr(*right);
                     let store = self.builder.build_store(alloca, expr);
-                        
 
                     // println!("alloca {:#?}, expr {:#?}, store {:#?}", alloca, expr, store);
 
                     (store, false)
                 }
-                _ => panic!("asd"),
+                _ => panic!("Invalid Expr!"),
             },
-            Expr::Return(var1, expr) => {
-                println!("asdasd {:#?}", var1);
+            Expr::Return(_, expr) => {
                 let var = self.compile_expr(*expr);
                 (self.builder.build_return(Some(&var)), true)
             }
-            _ => panic!("asd"),
-        } 
+            _ => panic!("Invalid Expr!"),
+        }
     }
 
     fn compile_expr(&self, expr: Expr) -> IntValue {
@@ -123,72 +116,60 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
                     self.context.bool_type().const_int(0, false)
                 }
             }
-            
-            Expr::ArithOp(op) => match op {
 
-                // ArithOp::Add => self.builder.build_int_add(l, r, "asd"),
-                _ => panic!("asd"),
-            }
             // Expr::BinOp(l, op, r) => self.compile_bin_op(*l, op, *r),
             // Expr::FuncCall(fn_call) => self.compile_function_call(fn_call),
             _ => unimplemented!(),
         }
     }
 
-    fn match_node(&self, expr: Expr) -> IntValue{
-        println!("här");
-        match expr{
-            Expr::Str(name) => {
-                let var = self.get_variable(&name);
-                self.builder.build_load(*var, &name).into_int_value()
-            }
-            Expr::Num(num) => self.compile_num(num),
-            Expr::Bool(b) => self.compile_bool(b),
-
-            
-            _ => panic!("ERROR: Can't match node")
-        }
-    }
-
-    
-
-    fn compile_bool(&self, b: bool) -> IntValue{
+    fn compile_bool(&self, b: bool) -> IntValue {
         match b {
             true => self.context.bool_type().const_int(1, false),
-            false => self.context.bool_type().const_int(0, false)
+            false => self.context.bool_type().const_int(0, false),
         }
     }
 
-    fn compile_num(&self, num: i32) -> IntValue{
+    fn compile_num(&self, num: i32) -> IntValue {
         self.context.i32_type().const_int(num as u64, false)
     }
 
-
     fn compile_rel_op(&self, op: RelOp, l: IntValue<'ctx>, r: IntValue<'ctx>) -> IntValue {
-        match op{
-            RelOp::EquEqu => self.builder.build_int_compare(IntPredicate::EQ, l, r, "tmpequ"), 
-            RelOp::NotEqu => self.builder.build_int_compare(IntPredicate::NE, l, r, "tmpneq"), 
-            RelOp::LesEqu => self.builder.build_int_compare(IntPredicate::SLE, l, r, "tmpleq"), 
-            RelOp::GreEqu => self.builder.build_int_compare(IntPredicate::SGE, l, r, "tmpgeq"), 
-            RelOp::Gre => self.builder.build_int_compare(IntPredicate::SGT, l, r, "tmpgre"), 
-            RelOp::Les => self.builder.build_int_compare(IntPredicate::SLT, l, r, "tmples"), 
+        match op {
+            RelOp::EquEqu => self
+                .builder
+                .build_int_compare(IntPredicate::EQ, l, r, "tmpequ"),
+            RelOp::NotEqu => self
+                .builder
+                .build_int_compare(IntPredicate::NE, l, r, "tmpneq"),
+            RelOp::LesEqu => self
+                .builder
+                .build_int_compare(IntPredicate::SLE, l, r, "tmpleq"),
+            RelOp::GreEqu => self
+                .builder
+                .build_int_compare(IntPredicate::SGE, l, r, "tmpgeq"),
+            RelOp::Gre => self
+                .builder
+                .build_int_compare(IntPredicate::SGT, l, r, "tmpgre"),
+            RelOp::Les => self
+                .builder
+                .build_int_compare(IntPredicate::SLT, l, r, "tmples"),
         }
     }
 
     fn compile_arith_op(&self, op: ArithOp, l: IntValue<'ctx>, r: IntValue<'ctx>) -> IntValue {
-        match op{
+        match op {
             ArithOp::Add => self.builder.build_int_add(l, r, "tmpadd"),
             ArithOp::Sub => self.builder.build_int_sub(l, r, "tmpsub"),
             ArithOp::Mult => self.builder.build_int_mul(l, r, "tmpmul"),
             ArithOp::Div => self.builder.build_int_signed_div(l, r, "tmpdiv"),
-            
         }
     }
 
     fn compile_logic_op(&self, op: LogicOp, l: IntValue<'ctx>, r: IntValue<'ctx>) -> IntValue {
-        match op{
-            LogicOp::And => self.builder.build_and(l, r, "and"), 
-            LogicOp::Or => self.builder.build_or(l, r, "or"), 
+        match op {
+            LogicOp::And => self.builder.build_and(l, r, "and"),
+            LogicOp::Or => self.builder.build_or(l, r, "or"),
             LogicOp::Not => self.builder.build_not(r, "not"), // TODO: Not sure about this one!
         }
     }

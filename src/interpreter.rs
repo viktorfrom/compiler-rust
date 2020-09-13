@@ -32,6 +32,7 @@ fn eval_expr(input: Expr) -> Content {
             LogicOp::Not => Content::ContentOp(ContentOp::Not),
         },
 
+        // TODO: Assign operators not working properly
         Expr::AssignOp(op) => match op {
             AssignOp::Equ => Content::ContentOp(ContentOp::Equ),
             AssignOp::PluEqu => Content::ContentOp(ContentOp::PluEqu),

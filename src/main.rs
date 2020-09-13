@@ -48,6 +48,7 @@ fn main() {
 
     let test = " 
         fn testfn() -> () {
+            let a:i32 = 1;
             return 1;
         };
         ";
@@ -59,7 +60,8 @@ fn main() {
         // println!("Type checker passed!");
         // let expr = eval_scope(tree.clone());
         // println!("eval = {:#?}", expr);
-        compiler(tree);
+        let res = compiler(tree);
+        println!("res = {:#?}", res);
     } else {
         panic!("ERROR: Typechecker failed!");
     }
