@@ -53,7 +53,7 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
     /// Returns the `FunctionValue` representing the function being compiled.
     #[inline]
     fn fn_value(&self) -> FunctionValue<'ctx> {
-        println!("eee");
+
         self.fn_value_opt.unwrap()
     }
 
@@ -79,13 +79,13 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
         builder.build_alloca(self.context.f64_type(), name)
     }
 
-    fn compile_keyword(&self, expr: &Expr) -> (InstructionValue, bool) {
+    fn compile_expr(&self, expr: &Expr) -> (InstructionValue, bool) {
         // println!("test  = {:#?}", expr);
         match expr.clone() {
             Expr::Let(left, _, right) => match *left {
                 Expr::Str(left) => {
                     let alloca = self.create_entry_block_alloca(&left);
-                    let expr = self.compile_expr(*right);
+                    let expr = self.compile_stmt(*right);
                     let store = self.builder.build_store(alloca, expr);
 
                     // println!("alloca {:#?}, expr {:#?}, store {:#?}", alloca, expr, store);
@@ -95,14 +95,14 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
                 _ => panic!("Invalid Expr!"),
             },
             Expr::Return(_, expr) => {
-                let var = self.compile_expr(*expr);
+                let var = self.compile_stmt(*expr);
                 (self.builder.build_return(Some(&var)), true)
             }
             _ => panic!("Invalid Expr!"),
         }
     }
 
-    fn compile_expr(&self, expr: Expr) -> IntValue {
+    fn compile_stmt(&self, expr: Expr) -> IntValue {
         match expr.clone() {
             Expr::Str(var) => {
                 let val = self.get_variable(&var);
@@ -181,7 +181,7 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
     fn compile_block(&mut self, block: Vec<Expr>) -> InstructionValue {
         let mut last_cmd: Option<InstructionValue> = None;
         for expr in block.iter() {
-            let (cmd, ret) = self.compile_keyword(expr);
+            let (cmd, ret) = self.compile_expr(expr);
             if ret {
                 return cmd;
             }
@@ -196,20 +196,6 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
 }
 
 pub fn compiler(tree: Vec<Expr>) -> Result<(), Box<dyn Error>> {
-    // let context = Context::create();
-    // let mut module = context.create_module("sum");
-    // let execution_engine = module.create_jit_execution_engine(OptimizationLevel::None)?;
-    // let builder = context.create_builder();
-
-    // let mut codegen = Compiler {
-    //     context: &context,
-    //     module: &module,
-    //     builder: &builder,
-    //     execution_engine: &execution_engine,
-    //     fn_value_opt: None,
-    //     variables: HashMap::new(),
-    // };
-
     let context = Context::create();
     let module = context.create_module("llvm-program");
     let builder = context.create_builder();
@@ -251,17 +237,18 @@ pub fn compiler(tree: Vec<Expr>) -> Result<(), Box<dyn Error>> {
         let function = compiler.module.add_function(&*fn_name, fn_type, None);
         let basic_block = context.append_basic_block(function, "entry");
 
+        compiler.fn_value_opt = Some(function);
         compiler.builder.position_at_end(basic_block);
         compiler.compile_block(fn_block);
     }
 
-    // compiler.module.print_to_stderr();
-    // let compiled_program: JitFunction<ExprFunc> =
-    //     unsafe {compiler.execution_engine.get_function("main").ok().unwrap()};
+    compiler.module.print_to_stderr();
+    let compiled_program: JitFunction<ExprFunc> =
+        unsafe {compiler.execution_engine.get_function("testfn").ok().unwrap()};
 
-    // unsafe {
-    //     println!("test: {} ", compiled_program.call());
-    // }
+    unsafe {
+        println!("test: {} ", compiled_program.call());
+    }
 
     Ok(())
 }
