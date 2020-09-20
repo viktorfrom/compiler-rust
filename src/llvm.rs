@@ -66,7 +66,7 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
     }
 
     /// Creates a new stack allocation instruction in the entry block of the function.
-    fn create_entry_block_alloca(&self, name: &str) -> PointerValue<'ctx> {
+    fn create_entry_block_alloca(&mut self, name: &str) -> PointerValue<'ctx> {
         let builder = self.context.create_builder();
 
         let entry = self.fn_value().get_first_basic_block().unwrap();
@@ -76,10 +76,12 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
             None => builder.position_at_end(entry),
         }
 
-        builder.build_alloca(self.context.f64_type(), name)
+        let alloca = builder.build_alloca(self.context.i32_type(), name);
+        self.variables.insert(name.to_string(), alloca);
+        alloca
     }
 
-    fn compile_expr(&self, expr: &Expr) -> (InstructionValue, bool) {
+    fn compile_expr(&mut self, expr: &Expr) -> (InstructionValue, bool) {
         // println!("test  = {:#?}", expr);
         match expr.clone() {
             Expr::Let(left, _, right) => match *left {
@@ -181,11 +183,11 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
     fn compile_block(&mut self, block: Vec<Expr>) -> InstructionValue {
         let mut last_cmd: Option<InstructionValue> = None;
         for expr in block.iter() {
-            let (cmd, ret) = self.compile_expr(expr);
-            if ret {
-                return cmd;
-            }
-            last_cmd = Some(cmd);
+            // let (cmd, ret) = self.compile_expr(expr);
+            // if ret {
+            //     return cmd;
+            // }
+            // last_cmd = Some(cmd);
         }
 
         match last_cmd {
