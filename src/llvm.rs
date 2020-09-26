@@ -42,6 +42,7 @@ pub struct Compiler<'a, 'ctx> {
     pub fn_value_opt: Option<FunctionValue<'ctx>>,
 
     variables: HashMap<String, PointerValue<'ctx>>,
+    statement: (InstructionValue<'ctx>, bool),
 }
 
 impl<'a, 'ctx> Compiler<'a, 'ctx> {
@@ -58,7 +59,7 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
     }
 
     #[inline]
-    fn get_variable(&self, name: &str) -> &PointerValue {
+    fn get_variable(&self, name: &str) -> &PointerValue<'ctx> {
         match self.variables.get(name) {
             Some(var) => var,
             None => panic!("ERROR: Can't find matching variable"),
@@ -81,7 +82,7 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
         alloca
     }
 
-    fn compile_expr(&mut self, expr: &Expr) -> (InstructionValue, bool) {
+    fn compile_expr(&mut self, expr: &Expr) -> (InstructionValue<'ctx>, bool) {
         // println!("test  = {:#?}", expr);
         match expr.clone() {
             Expr::Let(left, _, right) => match *left {
@@ -104,7 +105,7 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
         }
     }
 
-    fn compile_stmt(&self, expr: Expr) -> IntValue {
+    fn compile_stmt(&self, expr: Expr) -> IntValue<'ctx> {
         match expr.clone() {
             Expr::Str(var) => {
                 let val = self.get_variable(&var);
@@ -132,7 +133,7 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
         }
     }
 
-    fn compile_num(&self, num: i32) -> IntValue {
+    fn compile_num(&self, num: i32) -> IntValue<'ctx> {
         self.context.i32_type().const_int(num as u64, false)
     }
 
@@ -182,12 +183,14 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
 
     fn compile_block(&mut self, block: Vec<Expr>) -> InstructionValue {
         let mut last_cmd: Option<InstructionValue> = None;
+
         for expr in block.iter() {
-            // let (cmd, ret) = self.compile_expr(expr);
-            // if ret {
-            //     return cmd;
-            // }
-            // last_cmd = Some(cmd);
+            self.statement = self.compile_expr(expr);
+
+            if self.statement.1 {
+                return self.statement.0;
+            }
+            last_cmd = Some(self.statement.0);
         }
 
         match last_cmd {
@@ -212,6 +215,8 @@ pub fn compiler(tree: Vec<Expr>) -> Result<(), Box<dyn Error>> {
         execution_engine: &execution_engine,
         fn_value_opt: None,
         variables: HashMap::new(),
+
+        statement: (builder.build_return(None), false),
     };
 
     for scope in tree {

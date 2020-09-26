@@ -49,7 +49,7 @@ fn main() {
     let test = " 
         fn testfn() -> () {
             let a:i32 = 2;
-            return 1;
+            return a;
         };
         ";
 
