@@ -138,48 +138,52 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
     }
 
 
-    fn compile_if(&mut self, cond: Box<Expr>, block: Vec<Expr>) -> InstructionValue<'ctx> {
-        let condition = self.compile_stmt(*cond);
-
-        let basic_block1 = self.context.append_basic_block(self.fn_value(), "b1");
+    fn compile_if(&mut self, condition: Box<Expr>, block: Vec<Expr>) -> InstructionValue<'ctx> {
+        let cond = self.compile_stmt(*condition);
+        let then_block = self.context.append_basic_block(self.fn_value(), "then");
         let cont_block = self.context.append_basic_block(self.fn_value(), "cont");
 
-        self.builder.build_conditional_branch(condition, basic_block1, cont_block);
-
-        self.builder.position_at_end(basic_block1);
+        self.builder
+            .build_conditional_branch(cond, then_block, cont_block);
+        self.builder.position_at_end(then_block);
         self.compile_block(block);
+
         self.builder.build_unconditional_branch(cont_block);
-        
         self.builder.position_at_end(cont_block);
+
         let phi = self.builder.build_phi(self.context.i32_type(), "iftmp");
-
         phi.add_incoming(&[
-            (&self.compile_num(11), basic_block1),
-            (&self.compile_num(10), cont_block)
+            (&self.compile_num(0), then_block),
+            (&self.compile_num(0), cont_block),
         ]);
-
         phi.as_instruction()
     }
 
-    fn compile_while(&mut self, cond: Box<Expr>, block: Vec<Expr>) -> InstructionValue<'ctx> {
-        let test = cond.clone();
-        let basic_block1 = self.context.append_basic_block(self.fn_value(), "b1");
+    fn compile_while(&mut self, condition: Box<Expr>, block: Vec<Expr>) -> InstructionValue<'ctx> {
+        let do_block = self.context.append_basic_block(self.fn_value(), "do");
         let cont_block = self.context.append_basic_block(self.fn_value(), "cont");
 
-        self.builder.build_conditional_branch(self.compile_stmt(*cond), basic_block1, cont_block);
-
-        self.builder.position_at_end(basic_block1);
+        self.builder.build_conditional_branch(
+            self.compile_stmt(*condition.clone()),
+            do_block,
+            cont_block,
+        );
+        self.builder.position_at_end(do_block);
         self.compile_block(block);
-        self.builder.build_conditional_branch(self.compile_stmt(*test), basic_block1, cont_block);
 
+        self.builder.build_conditional_branch(
+            self.compile_stmt(*condition.clone()),
+            do_block,
+            cont_block,
+        );
         self.builder.position_at_end(cont_block);
+
+        // This phi node does nothing, used to return an InstructionValue
         let phi = self.builder.build_phi(self.context.i32_type(), "whiletmp");
-
-        phi.add_incoming(&[ 
-            (&self.compile_num(0), basic_block1),
-            (&self.compile_num(1), basic_block1),
+        phi.add_incoming(&[
+            (&self.compile_num(0), do_block),
+            (&self.compile_num(0), do_block),
         ]);
-
         phi.as_instruction()
     }
 

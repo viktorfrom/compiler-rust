@@ -49,14 +49,14 @@ fn main() {
     let test = " 
         fn testfn() -> i32 {
             let b: bool = true && true;
-            return b;
+            while true {
+                return b;
+            };
         };
-
-        let a = testfn();
         ";
 
     let tree = parse_expr(test).unwrap().1;
-    println!("Tree = {:#?}", tree);
+    // println!("Tree = {:#?}", tree);
 
     if type_scope(tree.clone()) {
         // println!("Type checker passed!");
