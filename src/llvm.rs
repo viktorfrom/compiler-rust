@@ -83,15 +83,12 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
     }
 
     fn compile_expr(&mut self, expr: &Expr) -> (InstructionValue<'ctx>, bool) {
-        // println!("test  = {:#?}", expr);
         match expr.clone() {
             Expr::Let(left, _, right) => match *left {
                 Expr::Str(left) => {
                     let alloca = self.create_entry_block_alloca(&left);
                     let expr = self.compile_stmt(*right);
                     let store = self.builder.build_store(alloca, expr);
-
-                    // println!("alloca {:#?}, expr {:#?}, store {:#?}", alloca, expr, store);
 
                     (store, false)
                 }
@@ -101,6 +98,12 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
                 let var = self.compile_stmt(*expr);
                 (self.builder.build_return(Some(&var)), true)
             }
+            Expr::If(cond, b) => {
+                    (self.compile_if(cond, b), false)
+                },
+            Expr::While(_while_param, var, block) => {
+                (self.compile_while(var, block), false)
+            },
             _ => panic!("Invalid Expr!"),
         }
     }
@@ -112,21 +115,59 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
                 self.builder.build_load(*val, &var).into_int_value()
             }
             Expr::Num(i) => self.compile_num(i),
-            Expr::Bool(b) => {
-                if b {
-                    self.context.bool_type().const_int(1, false)
-                } else {
-                    self.context.bool_type().const_int(0, false)
-                }
-            }
+            Expr::Bool(b) => self.compile_bool(b),
 
-            // Expr::BinOp(l, op, r) => self.compile_bin_op(*l, op, *r),
-            // Expr::FuncCall(fn_call) => self.compile_function_call(fn_call),
+
             _ => unimplemented!(),
         }
     }
 
-    fn compile_bool(&self, b: bool) -> IntValue {
+    fn compile_if(&mut self, cond: Box<Expr>, block: Vec<Expr>) -> InstructionValue<'ctx> {
+        let condition = self.compile_stmt(*cond);
+
+        let basic_block1 = self.context.append_basic_block(self.fn_value(), "b1");
+        let cont_block = self.context.append_basic_block(self.fn_value(), "cont");
+
+        self.builder.build_conditional_branch(condition, basic_block1, cont_block);
+
+        self.builder.position_at_end(basic_block1);
+        self.compile_block(block);
+        self.builder.build_unconditional_branch(cont_block);
+        
+        self.builder.position_at_end(cont_block);
+        let phi = self.builder.build_phi(self.context.i32_type(), "iftmp");
+
+        phi.add_incoming(&[
+            (&self.compile_num(11), basic_block1),
+            (&self.compile_num(10), cont_block)
+        ]);
+
+        phi.as_instruction()
+    }
+
+    fn compile_while(&mut self, cond: Box<Expr>, block: Vec<Expr>) -> InstructionValue<'ctx> {
+        let test = cond.clone();
+        let basic_block1 = self.context.append_basic_block(self.fn_value(), "b1");
+        let cont_block = self.context.append_basic_block(self.fn_value(), "cont");
+
+        self.builder.build_conditional_branch(self.compile_stmt(*cond), basic_block1, cont_block);
+
+        self.builder.position_at_end(basic_block1);
+        self.compile_block(block);
+        self.builder.build_conditional_branch(self.compile_stmt(*test), basic_block1, cont_block);
+
+        self.builder.position_at_end(cont_block);
+        let phi = self.builder.build_phi(self.context.i32_type(), "whiletmp");
+
+        phi.add_incoming(&[ 
+            (&self.compile_num(0), basic_block1),
+            (&self.compile_num(1), basic_block1),
+        ]);
+
+        phi.as_instruction()
+    }
+
+    fn compile_bool(&self, b: bool) -> IntValue<'ctx> {
         match b {
             true => self.context.bool_type().const_int(1, false),
             false => self.context.bool_type().const_int(0, false),

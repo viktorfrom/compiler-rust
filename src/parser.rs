@@ -136,7 +136,6 @@ fn parse_block(input: &str) -> IResult<&str, Vec<Expr>> {
                     parse_let,
                     parse_return,
                     parse_if,
-                    // parse_right_expr, // TODO: This should probably not be here
                     parse_while,
                 )),
                 terminated(tag(";"), multispace0),
@@ -308,7 +307,7 @@ mod parse_tests {
         assert!(parse_right_expr("        11 + 2 -1 / (5     *      3)                 ;").is_ok());
         assert!(parse_right_expr("((1 + 2) - (1 + 3))").is_ok());
         assert!(parse_right_expr("((1 + 2) - (1 + 3))").is_ok());
-        assert!(parse_right_expr("true && false").is_ok());
+        assert!(parse_right_expr("true && false").is_ok(), false);
         assert!(parse_right_expr("a == 1").is_ok());
     }
 
@@ -320,7 +319,18 @@ mod parse_tests {
 
     #[test]
     fn test_parse_func() {
-        assert!(parse_func("fn testfunc(arg1: i32, arg2: i32) { asd } ").is_ok());
+        assert_eq!(
+            parse_func(
+            "fn func() -> i32 {
+                let d: bool = true;
+                if d {
+                    return d;
+                };
+            }"
+            )
+            .is_ok(),
+            true
+        );
     }
 
     #[test]

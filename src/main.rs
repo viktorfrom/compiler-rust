@@ -47,21 +47,21 @@ fn main() {
         ";
 
     let test = " 
-        fn testfn() -> () {
-            let a:i32 = 2;
+        fn testfn() -> bool {
+            let a:bool = true && false;
             return a;
         };
         ";
 
     let tree = parse_expr(test).unwrap().1;
-    // println!("Tree = {:#?}", tree);
+    println!("Tree = {:#?}", tree);
 
     if type_scope(tree.clone()) {
         // println!("Type checker passed!");
-        // let expr = eval_scope(tree.clone());
-        // println!("eval = {:#?}", expr);
-        let res = compiler(tree);
-        println!("res = {:#?}", res);
+        let expr = eval_scope(tree.clone());
+        println!("eval = {:#?}", expr);
+        // let res = compiler(tree);
+        // println!("res = {:#?}", res);
     } else {
         panic!("ERROR: Typechecker failed!");
     }
