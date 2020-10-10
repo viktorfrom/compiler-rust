@@ -117,10 +117,26 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
             Expr::Num(i) => self.compile_num(i),
             Expr::Bool(b) => self.compile_bool(b),
 
+            Expr::Let(l, op, r) => {
+                self.compile_bin_op(*l, op, *r)
+            },
 
             _ => unimplemented!(),
         }
     }
+
+    fn compile_bin_op(&self, l: Expr, op: Box<Expr>, r: Expr) -> IntValue<'ctx> {
+        let l_val = self.compile_stmt(l);
+        let r_val = self.compile_stmt(r);
+
+        match *op {
+            Expr::LogicOp(op) => self.compile_logic_op(l_val, op, r_val),
+            Expr::ArithOp(op) => self.compile_arith_op(l_val, op, r_val),
+            Expr::RelOp(op) => self.compile_rel_op(l_val, op, r_val),
+            _ => panic!("Not a valid expression"),
+        }
+    }
+
 
     fn compile_if(&mut self, cond: Box<Expr>, block: Vec<Expr>) -> InstructionValue<'ctx> {
         let condition = self.compile_stmt(*cond);
@@ -178,7 +194,7 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
         self.context.i32_type().const_int(num as u64, false)
     }
 
-    fn compile_rel_op(&self, op: RelOp, l: IntValue<'ctx>, r: IntValue<'ctx>) -> IntValue {
+    fn compile_rel_op(&self, l: IntValue<'ctx>, op: RelOp, r: IntValue<'ctx>) -> IntValue<'ctx> {
         match op {
             RelOp::EquEqu => self
                 .builder
@@ -201,7 +217,7 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
         }
     }
 
-    fn compile_arith_op(&self, op: ArithOp, l: IntValue<'ctx>, r: IntValue<'ctx>) -> IntValue {
+    fn compile_arith_op(&self, l: IntValue<'ctx>, op: ArithOp, r: IntValue<'ctx>) -> IntValue<'ctx> {
         match op {
             ArithOp::Add => self.builder.build_int_add(l, r, "tmpadd"),
             ArithOp::Sub => self.builder.build_int_sub(l, r, "tmpsub"),
@@ -210,7 +226,7 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
         }
     }
 
-    fn compile_logic_op(&self, op: LogicOp, l: IntValue<'ctx>, r: IntValue<'ctx>) -> IntValue {
+    fn compile_logic_op(&self, l: IntValue<'ctx>, op: LogicOp, r: IntValue<'ctx>) -> IntValue<'ctx> {
         match op {
             LogicOp::And => self.builder.build_and(l, r, "and"),
             LogicOp::Or => self.builder.build_or(l, r, "or"),

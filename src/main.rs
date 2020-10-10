@@ -47,10 +47,12 @@ fn main() {
         ";
 
     let test = " 
-        fn testfn() -> bool {
-            let a:bool = true && false;
-            return a;
+        fn testfn() -> i32 {
+            let b: bool = true && true;
+            return b;
         };
+
+        let a = testfn();
         ";
 
     let tree = parse_expr(test).unwrap().1;
@@ -58,10 +60,10 @@ fn main() {
 
     if type_scope(tree.clone()) {
         // println!("Type checker passed!");
-        let expr = eval_scope(tree.clone());
-        println!("eval = {:#?}", expr);
-        // let res = compiler(tree);
-        // println!("res = {:#?}", res);
+        // let expr = eval_scope(tree.clone());
+        // println!("eval = {:#?}", expr);
+        let res = compiler(tree);
+        println!("res = {:#?}", res);
     } else {
         panic!("ERROR: Typechecker failed!");
     }
