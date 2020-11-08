@@ -15,8 +15,8 @@ pub fn parse_expr(input: &str) -> IResult<&str, Vec<Expr>> {
         multispace0,
         alt((
             parse_func,
-            parse_let_func,
             parse_let,
+            parse_let_func,
             parse_return,
             parse_if,
             parse_right_expr,
@@ -132,8 +132,8 @@ fn parse_block(input: &str) -> IResult<&str, Vec<Expr>> {
             terminated(
                 alt((
                     parse_func,
-                    parse_let_func,
                     parse_let,
+                    parse_let_func,
                     parse_return,
                     parse_if,
                     parse_while,
@@ -220,11 +220,18 @@ fn parse_let(input: &str) -> IResult<&str, Expr> {
         tuple((
             parse_var,
             preceded(tag(":"), parse_type),
-            preceded(parse_assign_op, alt((parse_right_expr, parse_var))),
+            preceded(
+                parse_assign_op,
+                alt((
+                    parse_right_expr,
+                    terminated(parse_var, delimited(multispace0, tag(";"), multispace0)),
+                )),
+            ),
         )),
         multispace0,
     )(input)?;
 
+    println!("substring = {:#?}", substring);
     Ok((
         substring,
         Expr::Let(Box::new(var), Box::new(var_type), Box::new(expr)),
@@ -243,8 +250,6 @@ pub fn parse_let_func(input: &str) -> IResult<&str, Expr> {
         multispace0,
     )(input)?;
 
-
-    println!("substring = {:#?}, var = {:#?}, func_name = {:#?}, block = {:#?}", substring, var, func_name, block);
     Ok((
         substring,
         Expr::FuncInput(Box::new(var), Box::new(func_name), block),
@@ -324,7 +329,7 @@ mod parse_tests {
     fn test_parse_func() {
         assert_eq!(
             parse_func(
-            "fn func() -> i32 {
+                "fn func() -> i32 {
                 let d: bool = true;
                 if d {
                     return d;

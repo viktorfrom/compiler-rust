@@ -14,6 +14,34 @@ use crate::parser::*;
 use crate::type_checker::*;
 
 fn main() {
+    // Interpreter
+    let test = " 
+        fn testfn() -> i32 {
+            let a: i32 = 3;
+            return a;
+        };
+        
+        
+        fn main() -> i32 {
+            let b: i32 = testfn();
+            return b;
+        };
+
+        let res: i32 = main();
+        ";
+
+    let tree = parse_expr(test).unwrap().1;
+    println!("Tree = {:#?}", tree);
+
+    if type_scope(tree.clone()) {
+        println!("Type checker passed!");
+        let expr = eval_scope(tree.clone());
+        println!("eval = {:#?}", expr);
+    } else {
+        panic!("ERROR: Typechecker failed!");
+    }
+
+    // LLVM
     let program1 = " 
         fn testfn() -> i32 {
             let a: i32 = 1;
@@ -23,7 +51,6 @@ fn main() {
             return c;
         };
 
-        let a = testfn();
         ";
 
     let program2 = " 
@@ -32,7 +59,6 @@ fn main() {
             return c;
         };
 
-        let a = testfn(3);
         ";
 
     let program3 = " 
@@ -44,30 +70,14 @@ fn main() {
             return 1;
         };
 
-        let a = testfn();
         ";
 
-    let test = " 
-        fn testfn() -> i32 {
-            return 3;
-        };
-        
-        
-        fn main() -> i32 {
-            let e: i32 = testfn();
-            return e;
-        };
-        ";
-
-    let tree = parse_expr(test).unwrap().1;
+    let tree = parse_expr(program3).unwrap().1;
     println!("Tree = {:#?}", tree);
 
     if type_scope(tree.clone()) {
-        // println!("Type checker passed!");
-        // let expr = eval_scope(tree.clone());
-        // println!("eval = {:#?}", expr);
         let res = compiler(tree);
-        println!("res = {:#?}", res);
+        println!("eval = {:#?}", res);
     } else {
         panic!("ERROR: Typechecker failed!");
     }
