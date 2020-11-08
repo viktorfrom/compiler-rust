@@ -41,6 +41,7 @@ fn main() {
             if b {
                 return 50;
             };
+            return 1;
         };
 
         let a = testfn();
@@ -48,15 +49,18 @@ fn main() {
 
     let test = " 
         fn testfn() -> i32 {
-            let b: bool = true && true;
-            while true {
-                return b;
-            };
+            return 3;
+        };
+        
+        
+        fn main() -> i32 {
+            let e: i32 = testfn();
+            return e;
         };
         ";
 
     let tree = parse_expr(test).unwrap().1;
-    // println!("Tree = {:#?}", tree);
+    println!("Tree = {:#?}", tree);
 
     if type_scope(tree.clone()) {
         // println!("Type checker passed!");

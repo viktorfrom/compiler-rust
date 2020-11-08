@@ -231,17 +231,20 @@ fn parse_let(input: &str) -> IResult<&str, Expr> {
     ))
 }
 
-fn parse_let_func(input: &str) -> IResult<&str, Expr> {
-    let (substring, (var, func_name, block)) = delimited(
+pub fn parse_let_func(input: &str) -> IResult<&str, Expr> {
+    let (substring, (var, _, func_name, block)) = delimited(
         delimited(multispace0, tag("let"), multispace0),
         tuple((
             parse_var,
+            preceded(tag(":"), parse_type),
             preceded(tag("="), parse_var),
             delimited(multispace0, parse_input_param, multispace0),
         )),
         multispace0,
     )(input)?;
 
+
+    println!("substring = {:#?}, var = {:#?}, func_name = {:#?}, block = {:#?}", substring, var, func_name, block);
     Ok((
         substring,
         Expr::FuncInput(Box::new(var), Box::new(func_name), block),
