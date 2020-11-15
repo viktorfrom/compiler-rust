@@ -8,38 +8,37 @@ mod memory;
 mod parser;
 mod type_checker;
 
-use crate::interpreter::*;
+// use crate::interpreter::*;
 use crate::llvm::*;
 use crate::parser::*;
 use crate::type_checker::*;
 
 fn main() {
-    // Interpreter
-    let test = " 
-        fn testfn() -> i32 {
-            let a: i32 = 3;
-            return a;
-        };
-        
-        
-        fn main() -> i32 {
-            let b: i32 = testfn();
-            return b;
-        };
+    // // Interpreter
+    // let test = "
+    //     fn testfn() -> i32 {
+    //         let a: i32 = 3;
+    //         return a;
+    //     };
 
-        let res: i32 = main();
-        ";
+    //     fn main() -> i32 {
+    //         let b: i32 = testfn();
+    //         return b;
+    //     };
 
-    let tree = parse_expr(test).unwrap().1;
-    println!("Tree = {:#?}", tree);
+    //     let res: i32 = main();
+    //     ";
 
-    if type_scope(tree.clone()) {
-        println!("Type checker passed!");
-        let expr = eval_scope(tree.clone());
-        println!("eval = {:#?}", expr);
-    } else {
-        panic!("ERROR: Typechecker failed!");
-    }
+    // let tree = parse_expr(test).unwrap().1;
+    // println!("Tree = {:#?}", tree);
+
+    // if type_scope(tree.clone()) {
+    //     println!("Type checker passed!");
+    //     let expr = eval_scope(tree.clone());
+    //     println!("eval = {:#?}", expr);
+    // } else {
+    //     panic!("ERROR: Typechecker failed!");
+    // }
 
     // LLVM
     let program1 = " 
@@ -72,8 +71,19 @@ fn main() {
 
         ";
 
+    let program3 = " 
+        fn testfn() -> i32 {
+            return 2;
+        };
+
+        fn main() -> i32 {
+            let a: i32 = testfn();
+            return a;
+        };
+        ";
+
     let tree = parse_expr(program3).unwrap().1;
-    println!("Tree = {:#?}", tree);
+    // println!("Tree = {:#?}", tree);
 
     if type_scope(tree.clone()) {
         let res = compiler(tree);

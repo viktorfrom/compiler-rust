@@ -54,12 +54,12 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
     /// Returns the `FunctionValue` representing the function being compiled.
     #[inline]
     fn fn_value(&self) -> FunctionValue<'ctx> {
-
         self.fn_value_opt.unwrap()
     }
 
     #[inline]
     fn get_variable(&self, name: &str) -> &PointerValue<'ctx> {
+        println!("var = {:#?}", name);
         match self.variables.get(name) {
             Some(var) => var,
             None => panic!("ERROR: Can't find matching variable"),
@@ -69,9 +69,7 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
     /// Creates a new stack allocation instruction in the entry block of the function.
     fn create_entry_block_alloca(&mut self, name: &str) -> PointerValue<'ctx> {
         let builder = self.context.create_builder();
-
         let entry = self.fn_value().get_first_basic_block().unwrap();
-
         match entry.get_first_instruction() {
             Some(first_instr) => builder.position_before(&first_instr),
             None => builder.position_at_end(entry),
@@ -94,21 +92,20 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
                 }
                 _ => panic!("Invalid Expr!"),
             },
+            Expr::If(cond, b) => (self.compile_if(cond, b), false),
+            Expr::While(_while_param, var, block) => (self.compile_while(var, block), false),
+            Expr::FuncInput(_var, _func_name, _block) => (self.compile_stmt(expr.clone()).as_instruction().unwrap(), false),
             Expr::Return(_, expr) => {
                 let var = self.compile_stmt(*expr);
                 (self.builder.build_return(Some(&var)), true)
             }
-            Expr::If(cond, b) => {
-                    (self.compile_if(cond, b), false)
-                },
-            Expr::While(_while_param, var, block) => {
-                (self.compile_while(var, block), false)
-            },
-            _ => panic!("Invalid Expr!"),
+
+            _ => panic!("Invalid Expr2!"),
         }
     }
 
-    fn compile_stmt(&self, expr: Expr) -> IntValue<'ctx> {
+    fn compile_stmt(&mut self, expr: Expr) -> IntValue<'ctx> {
+        println!("stmt = {:#?}", expr);
         match expr.clone() {
             Expr::Str(var) => {
                 let val = self.get_variable(&var);
@@ -116,16 +113,32 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
             }
             Expr::Num(i) => self.compile_num(i),
             Expr::Bool(b) => self.compile_bool(b),
+            Expr::Let(l, op, r) => self.compile_bin_op(*l, op, *r),
+            Expr::FuncInput(var, func_name, _block) => match *func_name {
+                Expr::Str(func_name) => {
+                    let fun = self.get_function(&func_name).unwrap();
+                    let fn_value = match self.builder.build_call(fun, &[], &func_name).try_as_basic_value().left() {
+                        Some(value) => Ok(value.into_int_value()),
+                        None => Err("Invalid call produced.")
+                    };
 
-            Expr::Let(l, op, r) => {
-                self.compile_bin_op(*l, op, *r)
+                    match *var {
+                        Expr::Str(v) => {
+                            let alloca = self.create_entry_block_alloca(&v);
+                            self.builder.build_store(alloca, fn_value.unwrap());
+                        },
+                        _ => panic!("Invalid Input!"),
+                    };
+
+                    return fn_value.unwrap();
+                },
+                _ => panic!("Invalid Input!")
             },
-
             _ => unimplemented!(),
         }
     }
 
-    fn compile_bin_op(&self, l: Expr, op: Box<Expr>, r: Expr) -> IntValue<'ctx> {
+    fn compile_bin_op(&mut self, l: Expr, op: Box<Expr>, r: Expr) -> IntValue<'ctx> {
         let l_val = self.compile_stmt(l);
         let r_val = self.compile_stmt(r);
 
@@ -136,7 +149,6 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
             _ => panic!("Not a valid expression"),
         }
     }
-
 
     fn compile_if(&mut self, condition: Box<Expr>, block: Vec<Expr>) -> InstructionValue<'ctx> {
         let cond = self.compile_stmt(*condition);
@@ -221,7 +233,12 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
         }
     }
 
-    fn compile_arith_op(&self, l: IntValue<'ctx>, op: ArithOp, r: IntValue<'ctx>) -> IntValue<'ctx> {
+    fn compile_arith_op(
+        &self,
+        l: IntValue<'ctx>,
+        op: ArithOp,
+        r: IntValue<'ctx>,
+    ) -> IntValue<'ctx> {
         match op {
             ArithOp::Add => self.builder.build_int_add(l, r, "tmpadd"),
             ArithOp::Sub => self.builder.build_int_sub(l, r, "tmpsub"),
@@ -230,7 +247,12 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
         }
     }
 
-    fn compile_logic_op(&self, l: IntValue<'ctx>, op: LogicOp, r: IntValue<'ctx>) -> IntValue<'ctx> {
+    fn compile_logic_op(
+        &self,
+        l: IntValue<'ctx>,
+        op: LogicOp,
+        r: IntValue<'ctx>,
+    ) -> IntValue<'ctx> {
         match op {
             LogicOp::And => self.builder.build_and(l, r, "and"),
             LogicOp::Or => self.builder.build_or(l, r, "or"),
@@ -311,11 +333,16 @@ pub fn compiler(tree: Vec<Expr>) -> Result<(), Box<dyn Error>> {
     }
 
     compiler.module.print_to_stderr();
-    let compiled_program: JitFunction<ExprFunc> =
-        unsafe {compiler.execution_engine.get_function("testfn").ok().unwrap()};
+    let compiled_program: JitFunction<ExprFunc> = unsafe {
+        compiler
+            .execution_engine
+            .get_function("testfn")
+            .ok()
+            .unwrap()
+    };
 
     unsafe {
-        println!("test: {} ", compiled_program.call());
+        println!("llvm-result: {} ", compiled_program.call());
     }
 
     Ok(())
