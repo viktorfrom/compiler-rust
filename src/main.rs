@@ -8,56 +8,60 @@ mod memory;
 mod parser;
 mod type_checker;
 
-// use crate::interpreter::*;
+use crate::interpreter::*;
 use crate::llvm::*;
 use crate::parser::*;
 use crate::type_checker::*;
 
 fn main() {
-    // // Interpreter
-    // let test = "
-    //     fn testfn() -> i32 {
-    //         let a: i32 = 3;
-    //         return a;
-    //     };
+    // Interpreter
+    let test = "
+        fn testfn(c: i32) -> i32 {
+            let a: i32 = c;
+            return a;
+        };
 
-    //     fn main() -> i32 {
-    //         let b: i32 = testfn();
-    //         return b;
-    //     };
+        fn main() -> i32 {
+            let b: i32 = testfn(3);
+            return b;
+        };
 
-    //     let res: i32 = main();
-    //     ";
+        let res: i32 = main();
+        ";
 
-    // let tree = parse_expr(test).unwrap().1;
-    // println!("Tree = {:#?}", tree);
+    let tree = parse_expr(test).unwrap().1;
+    println!("Tree = {:#?}", tree);
 
-    // if type_scope(tree.clone()) {
-    //     println!("Type checker passed!");
-    //     let expr = eval_scope(tree.clone());
-    //     println!("eval = {:#?}", expr);
-    // } else {
-    //     panic!("ERROR: Typechecker failed!");
-    // }
+    if type_scope(tree.clone()) {
+        println!("Type checker passed!");
+        let expr = eval_scope(tree.clone());
+        println!("eval = {:#?}", expr);
+    } else {
+        panic!("ERROR: Typechecker failed!");
+    }
 
     // LLVM
     let program1 = " 
         fn testfn() -> i32 {
             let a: i32 = 1;
-            let b: i32  = a;
-
+            let b: i32 = a;
             let c: i32 = b;
             return c;
         };
-
         ";
 
     let program2 = " 
-        fn testfn(b:i32) -> i32 {
-            let c:i32 = b;
-            return c;
+        fn testfn(c: i32) -> i32 {
+            let a: i32 = c;
+            return a;
         };
 
+        fn main() -> i32 {
+            let b: i32 = testfn(3);
+            return b;
+        };
+
+        let res: i32 = main();
         ";
 
     let program3 = " 
@@ -68,22 +72,28 @@ fn main() {
             };
             return 1;
         };
-
         ";
 
-    let program3 = " 
-        fn testfn() -> i32 {
+    let program4 = " 
+        fn testfn2() -> i32 {
             return 2;
         };
 
-        fn main() -> i32 {
-            let a: i32 = testfn();
+        fn testfn3() -> i32 {
+            return 3;
+        };
+
+        fn testfn() -> i32 {
+            let a: i32 = testfn2(); 
+            let b: i32 = testfn3();
+            let c: i32 = a + b;
             return a;
         };
         ";
 
-    let tree = parse_expr(program3).unwrap().1;
-    // println!("Tree = {:#?}", tree);
+
+    let tree = parse_expr(program4).unwrap().1;
+    println!("Tree = {:#?}", tree);
 
     if type_scope(tree.clone()) {
         let res = compiler(tree);

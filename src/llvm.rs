@@ -97,6 +97,7 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
             Expr::FuncInput(_var, _func_name, _block) => (self.compile_stmt(expr.clone()).as_instruction().unwrap(), false),
             Expr::Return(_, expr) => {
                 let var = self.compile_stmt(*expr);
+                println!("var = {:#?}", var);
                 (self.builder.build_return(Some(&var)), true)
             }
 
