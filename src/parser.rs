@@ -79,7 +79,7 @@ fn parse_rel_op(input: &str) -> IResult<&str, Expr> {
     )(input)
 }
 
-pub fn parse_var(input: &str) -> IResult<&str, Expr> {
+fn parse_var(input: &str) -> IResult<&str, Expr> {
     delimited(
         multispace0,
         map(alphanumeric0, |var: &str| Expr::Str(var.to_string())),
@@ -214,7 +214,7 @@ fn parse_while(input: &str) -> IResult<&str, Expr> {
     ))
 }
 
-pub fn parse_let(input: &str) -> IResult<&str, Expr> {
+fn parse_let(input: &str) -> IResult<&str, Expr> {
     let (substring, (var, var_type, expr)) = delimited(
         delimited(multispace0, tag("let"), multispace0),
         tuple((
@@ -237,7 +237,7 @@ pub fn parse_let(input: &str) -> IResult<&str, Expr> {
     ))
 }
 
-pub fn parse_let_func(input: &str) -> IResult<&str, Expr> {
+fn parse_let_func(input: &str) -> IResult<&str, Expr> {
     let (substring, (var, _, func_name, block)) = delimited(
         delimited(multispace0, tag("let"), multispace0),
         tuple((

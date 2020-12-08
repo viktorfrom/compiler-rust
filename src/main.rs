@@ -15,30 +15,30 @@ use crate::type_checker::*;
 
 fn main() {
     // Interpreter
-    let test = "
-        fn testfn(c: i32) -> i32 {
-            let a: i32 = c;
-            return a;
-        };
+    // let test = "
+    //     fn testfn(c: i32) -> i32 {
+    //         let a: i32 = c;
+    //         return a;
+    //     };
 
-        fn main() -> i32 {
-            let b: i32 = testfn(3);
-            return b;
-        };
+    //     fn main() -> i32 {
+    //         let b: i32 = testfn(3);
+    //         return b;
+    //     };
 
-        let res: i32 = main();
-        ";
+    //     let res: i32 = main();
+    //     ";
 
-    let tree = parse_expr(test).unwrap().1;
-    println!("Tree = {:#?}", tree);
+    // let tree = parse_expr(test).unwrap().1;
+    // println!("Tree = {:#?}", tree);
 
-    if type_scope(tree.clone()) {
-        println!("Type checker passed!");
-        let expr = eval_scope(tree.clone());
-        println!("eval = {:#?}", expr);
-    } else {
-        panic!("ERROR: Typechecker failed!");
-    }
+    // if type_scope(tree.clone()) {
+    //     println!("Type checker passed!");
+    //     let expr = eval_scope(tree.clone());
+    //     println!("eval = {:#?}", expr);
+    // } else {
+    //     panic!("ERROR: Typechecker failed!");
+    // }
 
     // LLVM
     let program1 = " 
@@ -80,14 +80,17 @@ fn main() {
         };
 
         fn testfn3() -> i32 {
-            return 3;
+            let b: bool = true && true;
+            if b {
+                return 50;
+            };
+            return 1;
         };
 
         fn testfn() -> i32 {
             let a: i32 = testfn2(); 
             let b: i32 = testfn3();
-            let c: i32 = a + b;
-            return a;
+            return b;
         };
         ";
 

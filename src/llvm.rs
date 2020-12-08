@@ -115,8 +115,9 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
             Expr::Num(i) => self.compile_num(i),
             Expr::Bool(b) => self.compile_bool(b),
             Expr::Let(l, op, r) => self.compile_bin_op(*l, op, *r),
-            Expr::FuncInput(var, func_name, _block) => match *func_name {
+            Expr::FuncInput(var, func_name, block) => match *func_name {
                 Expr::Str(func_name) => {
+                    // println!("var = {:#?}, block = {:#?}", var, block);
                     let fun = self.get_function(&func_name).unwrap();
                     let fn_value = match self.builder.build_call(fun, &[], &func_name).try_as_basic_value().left() {
                         Some(value) => Ok(value.into_int_value()),
