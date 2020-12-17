@@ -338,7 +338,7 @@ pub fn compiler(tree: Vec<Expr>) -> Result<(), Box<dyn Error>> {
     let compiled_program: JitFunction<ExprFunc> = unsafe {
         compiler
             .execution_engine
-            .get_function("testfn")
+            .get_function("main")
             .ok()
             .unwrap()
     };
