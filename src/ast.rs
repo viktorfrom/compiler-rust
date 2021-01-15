@@ -9,21 +9,20 @@ pub enum Expr {
 
     Let(Box<Expr>, Type, Box<Expr>),
 
-    If(Box<Expr>, Block),
-    IfElse(Box<Expr>, Block),
-    While(Box<Expr>, Block),
+    If(Box<Expr>, Vec<Expr>),
+    IfElse(Box<Expr>, Vec<Expr>),
+    While(Box<Expr>, Vec<Expr>),
 
-    // FnCall(FnCall),
-    // FnCall(FnHead, FnHead),
+    FnCall(Box<Expr>, Vec<Expr>, Type),
     Return(Box<Expr>),
 }
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum Type {
-    Int,
+    I32,
     Bool,
     Str,
-    // Void,
+    Void,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -32,13 +31,6 @@ pub enum Op {
     AriOp(AriOp),
     AssOp(AssOp),
     RelOp(RelOp),
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub enum FnHead {
-    Name(String),
-    Params(Vec<Box<Expr>>),
-    Return(Type),
 }
 
 #[derive(Debug, PartialEq, Copy, Clone)]
@@ -72,15 +64,4 @@ pub enum RelOp {
     Geq,
     Les,
     Gre,
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct Block {
-    pub content: Vec<Expr>,
-}
-
-impl Block {
-    pub fn new(exprs: Vec<Expr>) -> Block {
-        Block { content: exprs }
-    }
 }

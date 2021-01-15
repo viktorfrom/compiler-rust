@@ -113,7 +113,7 @@ fn parse_bin_expr(input: &str) -> IResult<&str, Expr> {
                     parse_bool,
                     parse_i32,
                     parse_paren,
-                    // parse_fn_call,
+                    parse_fn_call,
                     parse_var,
                 )),
                 parse_op,
@@ -124,15 +124,15 @@ fn parse_bin_expr(input: &str) -> IResult<&str, Expr> {
         parse_bool,
         parse_i32,
         parse_paren,
-        // parse_fn_call,
-        parse_var,
+        parse_fn_call,
+        // parse_var,
     ))(input)
 }
 
 fn parse_return(input: &str) -> IResult<&str, Expr> {
     let (substring, val) = delimited(
         multispace0,
-        preceded(tag("return"), parse_bin_expr),
+        preceded(tag("return"), alt((parse_bin_expr, parse_var))),
         multispace0,
     )(input)?;
 
@@ -147,10 +147,37 @@ fn parse_paren(input: &str) -> IResult<&str, Expr> {
     )(input)
 }
 
+pub fn parse_fn_call(input: &str) -> IResult<&str, Expr> {
+    let (substring, (fn_name, args)) = tuple((parse_var, parse_args))(input)?;
+
+    Ok((
+        substring,
+        Expr::FnCall(Box::new(fn_name), args, Type::Bool),
+    ))
+}
+
 fn parse_var(input: &str) -> IResult<&str, Expr> {
     delimited(
         multispace0,
         map(alphanumeric0, |var: &str| Expr::Var(var.to_string())),
+        multispace0,
+    )(input)
+}
+
+fn parse_arg(input: &str) -> IResult<&str, Expr> {
+    let (substring, val) = terminated(parse_bin_expr, multispace0)(input)?;
+
+    Ok((substring, val))
+}
+
+pub fn parse_args(input: &str) -> IResult<&str, Vec<Expr>> {
+    delimited(
+        multispace0,
+        delimited(
+            tag("("),
+            many0(alt((parse_arg, preceded(tag(","), parse_arg)))),
+            tag(")"),
+        ),
         multispace0,
     )(input)
 }
@@ -215,13 +242,37 @@ mod parse_tests {
         assert_eq!(parse_bin_expr("false"), Ok(("", Expr::Bool(false))));
         assert_eq!(parse_bin_expr("1"), Ok(("", Expr::Num(1))));
         assert_eq!(parse_bin_expr("(1)"), Ok(("", Expr::Num(1))));
-        // assert_eq!(parse_bin_expr("+"), Ok(("", Expr::AriOp(AriOp::Add))));
+        assert_eq!(
+            parse_bin_expr("1 + 2"),
+            Ok((
+                "",
+                Expr::BinOp(
+                    Box::new(Expr::Num(1)),
+                    Op::AriOp(AriOp::Add),
+                    Box::new(Expr::Num(2)),
+                )
+            ))
+        );
     }
 
     #[test]
     fn test_parse_return() {
-        assert_eq!(parse_return("return true"), Ok(("", Expr::Return(Box::new(Expr::Bool(true))))));
-        assert_eq!(parse_return("return false"), Ok(("", Expr::Return(Box::new(Expr::Bool(false))))));
+        assert_eq!(
+            parse_return("return true"),
+            Ok(("", Expr::Return(Box::new(Expr::Bool(true)))))
+        );
+        assert_eq!(
+            parse_return("return false"),
+            Ok(("", Expr::Return(Box::new(Expr::Bool(false)))))
+        );
+        assert_eq!(
+            parse_return("return 1"),
+            Ok(("", Expr::Return(Box::new(Expr::Num(1)))))
+        );
+        assert_eq!(
+            parse_return("return a"),
+            Ok(("", Expr::Return(Box::new(Expr::Var("a".to_string())))))
+        );
     }
 
     #[test]
@@ -232,5 +283,22 @@ mod parse_tests {
     #[test]
     fn test_parse_var() {
         assert_eq!(parse_var("a"), Ok(("", Expr::Var("a".to_string()))));
+    }
+
+    #[test]
+    fn test_parse_arg() {
+        assert_eq!(parse_arg("1"), Ok(("", Expr::Num(1))));
+    }
+
+    #[test]
+    fn test_parse_args() {
+        assert_eq!(
+            parse_args("(1, 2, 3)"),
+            Ok(("", vec![Expr::Num(1), Expr::Num(2), Expr::Num(3)]))
+        );
+        assert_eq!(
+            parse_args("(1, true, 3)"),
+            Ok(("", vec![Expr::Num(1), Expr::Bool(true), Expr::Num(3)]))
+        );
     }
 }
