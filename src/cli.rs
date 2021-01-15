@@ -29,8 +29,8 @@ pub fn cli() {
     let opt = Opt::from_args();
 
     if opt.llvm {
-        // let tree = parser(&program()).unwrap().1;
-        // println!("Tree = {:#?}", tree);
+        let tree = parser(&program()).unwrap().1;
+        println!("Tree = {:#?}", tree);
 
         // if type_checker(tree.clone()) {
         //     let res = compiler(tree);

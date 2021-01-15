@@ -10,21 +10,21 @@ use nom::{
     IResult,
 };
 
-// pub fn parser(input: &str) -> IResult<&str, Vec<Expr>> {
-//     many0(delimited(
-//         multispace0,
-//         alt((
-//             parse_func,
-//     //         parse_let_func,
-//     //         parse_let,
-//     //         parse_return,
-//     //         parse_if,
-//             parse_right_expr,
-//     //         parse_while,
-//         )),
-//         alt((tag(";"), multispace0)),
-//     ))(input)
-// }
+pub fn parser(input: &str) -> IResult<&str, Vec<Expr>> {
+    many0(delimited(
+        multispace0,
+        alt((
+            // parse_func,
+            //         parse_let_func,
+            //         parse_let,
+            parse_return,
+            //         parse_if,
+            parse_bin_expr,
+            //         parse_while,
+        )),
+        alt((tag(";"), multispace0)),
+    ))(input)
+}
 
 fn parse_i32(input: &str) -> IResult<&str, Expr> {
     let (substring, digit) = delimited(multispace0, digit1, multispace0)(input)?;
@@ -43,15 +43,10 @@ fn parse_bool(input: &str) -> IResult<&str, Expr> {
     )(input)
 }
 
-fn parse_op(input: &str) ->  IResult<&str, Op> {
+fn parse_op(input: &str) -> IResult<&str, Op> {
     delimited(
         multispace0,
-        alt((
-            parse_ari_op,
-            parse_log_op,
-            parse_ass_op,
-            parse_rel_op,
-        )),
+        alt((parse_ari_op, parse_log_op, parse_ass_op, parse_rel_op)),
         multispace0,
     )(input)
 }
@@ -109,6 +104,57 @@ fn parse_rel_op(input: &str) -> IResult<&str, Op> {
         multispace0,
     )(input)
 }
+
+fn parse_bin_expr(input: &str) -> IResult<&str, Expr> {
+    alt((
+        map(
+            tuple((
+                alt((
+                    parse_bool,
+                    parse_i32,
+                    parse_paren,
+                    // parse_fn_call,
+                    parse_var,
+                )),
+                parse_op,
+                parse_bin_expr,
+            )),
+            |(left, op, right)| Expr::BinOp(Box::new(left), op, Box::new(right)),
+        ),
+        parse_bool,
+        parse_i32,
+        parse_paren,
+        // parse_fn_call,
+        parse_var,
+    ))(input)
+}
+
+fn parse_return(input: &str) -> IResult<&str, Expr> {
+    let (substring, val) = delimited(
+        multispace0,
+        preceded(tag("return"), parse_bin_expr),
+        multispace0,
+    )(input)?;
+
+    Ok((substring, Expr::Return(Box::new(val))))
+}
+
+fn parse_paren(input: &str) -> IResult<&str, Expr> {
+    delimited(
+        multispace0,
+        delimited(tag("("), parse_bin_expr, tag(")")),
+        multispace0,
+    )(input)
+}
+
+fn parse_var(input: &str) -> IResult<&str, Expr> {
+    delimited(
+        multispace0,
+        map(alphanumeric0, |var: &str| Expr::Var(var.to_string())),
+        multispace0,
+    )(input)
+}
+
 #[cfg(test)]
 mod parse_tests {
     use super::*;
@@ -164,74 +210,27 @@ mod parse_tests {
         assert_eq!(parse_rel_op(">="), Ok(("", Op::RelOp(RelOp::Geq))));
     }
 
-        // #[test]
-    // fn test_parse_type() {
-    //     assert_eq!(parse_type("i32"), Ok(("", Expr::Type(Type::Integer))));
-    //     assert_eq!(parse_type("bool"), Ok(("", Expr::Type(Type::Bool))));
-    //     assert_eq!(parse_type("String"), Ok(("", Expr::Type(Type::Str))));
-    // }
+    #[test]
+    fn test_parse_bin_expr() {
+        assert_eq!(parse_bin_expr("false"), Ok(("", Expr::Bool(false))));
+        assert_eq!(parse_bin_expr("1"), Ok(("", Expr::Num(1))));
+        assert_eq!(parse_bin_expr("(1)"), Ok(("", Expr::Num(1))));
+        // assert_eq!(parse_bin_expr("+"), Ok(("", Expr::AriOp(AriOp::Add))));
+    }
 
+    #[test]
+    fn test_parse_return() {
+        assert_eq!(parse_return("return true"), Ok(("", Expr::Return(Box::new(Expr::Bool(true))))));
+        assert_eq!(parse_return("return false"), Ok(("", Expr::Return(Box::new(Expr::Bool(false))))));
+    }
 
-    // #[test]
-    // fn test_right_expr_arith() {
-    //     assert!(parse_right_expr("        11 + 2 -1 / (5     *      3)                 ;").is_ok());
-    //     assert!(parse_right_expr("((1 + 2) - (1 + 3))").is_ok());
-    //     assert!(parse_right_expr("((1 + 2) - (1 + 3))").is_ok());
-    //     assert!(parse_right_expr("true && false").is_ok(), false);
-    //     assert!(parse_right_expr("a == 1").is_ok());
-    // }
+    #[test]
+    fn test_parse_paren() {
+        assert_eq!(parse_paren("(1)"), Ok(("", Expr::Num(1))));
+    }
 
-    // #[test]
-    // fn test_parse_let() {
-    //     assert!(parse_let("let a: i32 = 3 + 2 + 4").is_ok());
-    //     assert!(parse_let("let a: i32 = b").is_ok());
-    // }
-
-    // #[test]
-    // fn test_parse_func() {
-    //     assert_eq!(
-    //         parse_func(
-    //             "fn func() -> i32 {
-    //             let d: bool = true;
-    //             if d {
-    //                 return d;
-    //             };
-    //         }"
-    //         )
-    //         .is_ok(),
-    //         true
-    //     );
-    // }
-
-    // #[test]
-    // fn test_parse_param() {
-    //     assert!(parse_param("a: bool").is_ok());
-    //     assert!(parse_param("input1: i32, input2: i32").is_ok());
-    // }
-
-    // #[test]
-    // fn test_parse_if() {
-    //     assert!(
-    //         parse_param(" if a == true {  let a: i32 =3 + 2 + 4;let a: i32 = 3 + 2 + 4;}").is_ok()
-    //     );
-    //     assert!(parse_param(" if a == true {}").is_ok());
-    //     assert!(parse_param(" if true {}").is_ok());
-    // }
-
-    // #[test]
-    // fn test_parse_block() {
-    //     assert!(parse_param("{let a: i32 =3 + 2 + 4;let a: i32 = 3 + 2 + 4;}").is_ok());
-    // }
-
-    // #[test]
-    // fn test_parse_while() {
-    //     assert!(parse_param("    while     true   { let a: i32 = 3 + 2 + 4;    }").is_ok());
-    //     assert!(parse_param("    while     a == 1   { let a: i32 = 3 + 2 + 4;    }").is_ok());
-    // }
-
-    // #[test]
-    // fn test_parse_return() {
-    //     assert!(parse_param("   return     1 + 2+ 3   ;").is_ok());
-    // }
-
+    #[test]
+    fn test_parse_var() {
+        assert_eq!(parse_var("a"), Ok(("", Expr::Var("a".to_string()))));
+    }
 }
