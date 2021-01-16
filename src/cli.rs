@@ -41,7 +41,7 @@ pub fn cli() {
         // }
     } else {
         // let tree = parse_expr(program()).unwrap().1;
-        let tree = parse_if_else("if true {return 1} else {return 1}");
+        let tree = parse_params("(a:i32, b:bool)");
         println!("Tree = {:#?}", tree);
 
         // if type_scope(tree.clone()) {

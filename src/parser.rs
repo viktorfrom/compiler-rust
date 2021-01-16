@@ -167,7 +167,7 @@ fn parse_arg(input: &str) -> IResult<&str, Expr> {
 }
 
 pub fn parse_args(input: &str) -> IResult<&str, Vec<Expr>> {
-    delimited(
+    let (substring, vec) = delimited(
         multispace0,
         delimited(
             tag("("),
@@ -175,7 +175,9 @@ pub fn parse_args(input: &str) -> IResult<&str, Vec<Expr>> {
             tag(")"),
         ),
         multispace0,
-    )(input)
+    )(input)?;
+    
+    Ok((substring, vec))
 }
 
 pub fn parse_var_expr(input: &str) -> IResult<&str, Expr> {
@@ -264,6 +266,28 @@ pub fn parse_while(input: &str) -> IResult<&str, Expr> {
 
     Ok((substring, Expr::While(Box::new(cond), block)))
 }
+
+pub fn parse_param(input: &str) -> IResult<&str, (Expr, Type)> {
+    let (substring, (var, var_type)) = tuple((terminated(parse_var, tag(":")), parse_type))(input)?;
+
+    // println!("sub = {:#?}, var = {:#?}, type = {:#?}", substring, var, var_type);
+    Ok((substring, (var, var_type)))
+}
+
+pub fn parse_params(input: &str) -> IResult<&str, Vec<(Expr, Type)>> {
+    let (substring, val) = delimited(
+        multispace0,
+        delimited(
+            tag("("),
+            many0(alt((parse_param, preceded(tag(","), parse_param)))),
+            tag(")"),
+        ),
+        multispace0,
+    )(input)?;
+
+    Ok((substring, val))
+}
+
 
 #[cfg(test)]
 mod parse_tests {
