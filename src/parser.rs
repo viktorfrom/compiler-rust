@@ -222,6 +222,18 @@ fn parse_type(input: &str) -> IResult<&str, Type> {
     )(input)
 }
 
+pub fn parse_if(input: &str) -> IResult<&str, Expr> {
+    let (substring, (cond, block)) = tuple((
+        preceded(
+            delimited(multispace0, tag("if"), multispace0),
+            alt((parse_bool, parse_var_expr)),
+        ),
+        parse_block,
+    ))(input)?;
+
+    Ok((substring, Expr::If(Box::new(cond), block)))
+}
+
 #[cfg(test)]
 mod parse_tests {
     use super::*;
@@ -482,31 +494,66 @@ mod parse_tests {
         );
         assert_eq!(
             parse_block("{let a: i32 = 1; return 1}"),
-            Ok(("", vec![
-                Expr::Let(
-                    Box::new(Expr::Var("a".to_string())),
-                    Type::I32,
-                    Box::new(Expr::BinExpr(
-                        Box::new(Expr::Var("".to_string())),
-                        Op::AssOp(AssOp::Equ),
-                        Box::new(Expr::Num(1))
-                    ))
-                ),
-                Expr::Return(Box::new(Expr::Num(1)))]))
+            Ok((
+                "",
+                vec![
+                    Expr::Let(
+                        Box::new(Expr::Var("a".to_string())),
+                        Type::I32,
+                        Box::new(Expr::BinExpr(
+                            Box::new(Expr::Var("".to_string())),
+                            Op::AssOp(AssOp::Equ),
+                            Box::new(Expr::Num(1))
+                        ))
+                    ),
+                    Expr::Return(Box::new(Expr::Num(1)))
+                ]
+            ))
         );
         assert_eq!(
             parse_block("{let a: bool = true; return a}"),
-            Ok(("", vec![
-                Expr::Let(
-                    Box::new(Expr::Var("a".to_string())),
-                    Type::Bool,
-                    Box::new(Expr::BinExpr(
-                        Box::new(Expr::Var("".to_string())),
-                        Op::AssOp(AssOp::Equ),
-                        Box::new(Expr::Bool(true))
-                    ))
+            Ok((
+                "",
+                vec![
+                    Expr::Let(
+                        Box::new(Expr::Var("a".to_string())),
+                        Type::Bool,
+                        Box::new(Expr::BinExpr(
+                            Box::new(Expr::Var("".to_string())),
+                            Op::AssOp(AssOp::Equ),
+                            Box::new(Expr::Bool(true))
+                        ))
+                    ),
+                    Expr::Return(Box::new(Expr::Var("a".to_string())))
+                ]
+            ))
+        );
+    }
+    #[test]
+    fn test_parse_if() {
+        assert_eq!(
+            parse_if("if true {return 1}"),
+            Ok((
+                "",
+                Expr::If(
+                    Box::new(Expr::Bool(true)),
+                    vec![Expr::Return(Box::new(Expr::Num(1)))]
+                )
+            ))
+        );
+        assert_eq!(
+            parse_if("if a == b {return 1}"),
+            Ok((
+                "",
+                Expr::If(
+                    Box::new(Expr::VarExpr(
+                        Box::new(Expr::Var("a".to_string())),
+                        Op::RelOp(RelOp::Eq),
+                        Box::new(Expr::Var("b".to_string()))
+                    )),
+                    vec![Expr::Return(Box::new(Expr::Num(1)))]
                 ),
-                Expr::Return(Box::new(Expr::Var("a".to_string())))]))
+            ))
         );
     }
 }
