@@ -18,9 +18,12 @@ fn parse_scope(input: &str) -> IResult<&str, Expr> {
     delimited(
         multispace0,
         alt((
-            parse_return,
             // parse_var_expr,
+            parse_if,
+            parse_if_else,
+            parse_while,
             parse_let,
+            parse_return,
         )),
         multispace0,
     )(input)
@@ -232,6 +235,22 @@ pub fn parse_if(input: &str) -> IResult<&str, Expr> {
     ))(input)?;
 
     Ok((substring, Expr::If(Box::new(cond), block)))
+}
+
+pub fn parse_if_else(input: &str) -> IResult<&str, Expr> {
+    let (substring, (cond, block1, block2)) = tuple((
+        preceded(
+            delimited(multispace0, tag("if"), multispace0),
+            alt((parse_bool, parse_var_expr)),
+        ),
+        parse_block,
+        preceded(
+            delimited(multispace0, tag("else"), multispace0),
+            parse_block,
+        ),
+    ))(input)?;
+
+    Ok((substring, Expr::IfElse(Box::new(cond), block1, block2)))
 }
 
 pub fn parse_while(input: &str) -> IResult<&str, Expr> {
@@ -565,6 +584,20 @@ mod parse_tests {
                     )),
                     vec![Expr::Return(Box::new(Expr::Num(1)))]
                 ),
+            ))
+        );
+    }
+    #[test]
+    fn test_parse_if_else() {
+        assert_eq!(
+            parse_if_else("if true {return 1} else {return 1}"),
+            Ok((
+                "",
+                Expr::IfElse(
+                    Box::new(Expr::Bool(true)),
+                    vec![Expr::Return(Box::new(Expr::Num(1)))],
+                    vec![Expr::Return(Box::new(Expr::Num(1)))],
+                )
             ))
         );
     }

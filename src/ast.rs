@@ -10,7 +10,7 @@ pub enum Expr {
     Let(Box<Expr>, Type, Box<Expr>),
 
     If(Box<Expr>, Vec<Expr>),
-    IfElse(Box<Expr>, Vec<Expr>),
+    IfElse(Box<Expr>, Vec<Expr>, Vec<Expr>),
     While(Box<Expr>, Vec<Expr>),
 
     FnCall(Box<Expr>, Vec<Expr>),
