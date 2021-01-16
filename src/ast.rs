@@ -13,6 +13,7 @@ pub enum Expr {
     IfElse(Box<Expr>, Vec<Expr>, Vec<Expr>),
     While(Box<Expr>, Vec<Expr>),
 
+    Function(Box<Expr>, Vec<(Expr, Type)>, Vec<Expr>),
     FnCall(Box<Expr>, Vec<Expr>),
     Return(Box<Expr>),
 }

@@ -162,7 +162,6 @@ fn parse_var(input: &str) -> IResult<&str, Expr> {
 fn parse_arg(input: &str) -> IResult<&str, Expr> {
     let (substring, val) = terminated(parse_bin_expr, multispace0)(input)?;
 
-    println!("sub = {:#?}, val = {:#?}", substring, val);
     Ok((substring, val))
 }
 
@@ -176,7 +175,7 @@ pub fn parse_args(input: &str) -> IResult<&str, Vec<Expr>> {
         ),
         multispace0,
     )(input)?;
-    
+
     Ok((substring, vec))
 }
 
@@ -270,7 +269,6 @@ pub fn parse_while(input: &str) -> IResult<&str, Expr> {
 pub fn parse_param(input: &str) -> IResult<&str, (Expr, Type)> {
     let (substring, (var, var_type)) = tuple((terminated(parse_var, tag(":")), parse_type))(input)?;
 
-    // println!("sub = {:#?}, var = {:#?}, type = {:#?}", substring, var, var_type);
     Ok((substring, (var, var_type)))
 }
 
@@ -287,7 +285,6 @@ pub fn parse_params(input: &str) -> IResult<&str, Vec<(Expr, Type)>> {
 
     Ok((substring, val))
 }
-
 
 #[cfg(test)]
 mod parse_tests {
@@ -434,6 +431,32 @@ mod parse_tests {
         assert_eq!(
             parse_args("(1, true, 3)"),
             Ok(("", vec![Expr::Num(1), Expr::Bool(true), Expr::Num(3)]))
+        );
+    }
+
+    #[test]
+    fn test_parse_param() {
+        assert_eq!(
+            parse_param("a:i32"),
+            Ok(("", (Expr::Var("a".to_string()), Type::I32)))
+        );
+        assert_eq!(
+            parse_param("a:bool"),
+            Ok(("", (Expr::Var("a".to_string()), Type::Bool)))
+        );
+    }
+
+    #[test]
+    fn test_parse_params() {
+        assert_eq!(
+            parse_params("(a: i32, b: bool)"),
+            Ok((
+                "",
+                vec![
+                    (Expr::Var("a".to_string()), Type::I32),
+                    (Expr::Var("b".to_string()), Type::Bool)
+                ]
+            ))
         );
     }
 
