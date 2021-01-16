@@ -1,6 +1,6 @@
 #[derive(Debug, PartialEq, Clone)]
 pub enum Expr {
-    Num(i32),
+    Int(i32),
     Var(String),
     Bool(bool),
 
@@ -20,7 +20,7 @@ pub enum Expr {
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum Type {
-    I32,
+    Int,
     Bool,
     Str,
     Void,

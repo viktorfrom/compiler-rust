@@ -30,10 +30,10 @@ fn parse_scope(input: &str) -> IResult<&str, Expr> {
     )(input)
 }
 
-fn parse_i32(input: &str) -> IResult<&str, Expr> {
+fn parser_int(input: &str) -> IResult<&str, Expr> {
     let (substring, digit) = delimited(multispace0, digit1, multispace0)(input)?;
 
-    Ok((substring, Expr::Num(digit.parse::<i32>().unwrap())))
+    Ok((substring, Expr::Int(digit.parse::<i32>().unwrap())))
 }
 
 fn parse_bool(input: &str) -> IResult<&str, Expr> {
@@ -113,14 +113,14 @@ fn parse_bin_expr(input: &str) -> IResult<&str, Expr> {
     alt((
         map(
             tuple((
-                alt((parse_bool, parse_i32, parse_paren, parse_fn_call, parse_var)),
+                alt((parse_bool, parser_int, parse_paren, parse_fn_call, parse_var)),
                 parse_op,
                 parse_bin_expr,
             )),
             |(left, op, right)| Expr::BinExpr(Box::new(left), op, Box::new(right)),
         ),
         parse_bool,
-        parse_i32,
+        parser_int,
         parse_paren,
         parse_fn_call,
         // parse_var,
@@ -145,10 +145,9 @@ fn parse_paren(input: &str) -> IResult<&str, Expr> {
     )(input)
 }
 
-pub fn parse_fn_call(input: &str) -> IResult<&str, Expr> {
+fn parse_fn_call(input: &str) -> IResult<&str, Expr> {
     let (substring, (fn_name, args)) = tuple((parse_var, parse_args))(input)?;
 
-    println!("sb = {:#?}, args = {:#?}", substring, args);
     Ok((substring, Expr::FnCall(Box::new(fn_name), args)))
 }
 
@@ -166,7 +165,7 @@ fn parse_arg(input: &str) -> IResult<&str, Expr> {
     Ok((substring, val))
 }
 
-pub fn parse_args(input: &str) -> IResult<&str, Vec<Expr>> {
+fn parse_args(input: &str) -> IResult<&str, Vec<Expr>> {
     let (substring, vec) = delimited(
         multispace0,
         delimited(
@@ -180,7 +179,7 @@ pub fn parse_args(input: &str) -> IResult<&str, Vec<Expr>> {
     Ok((substring, vec))
 }
 
-pub fn parse_var_expr(input: &str) -> IResult<&str, Expr> {
+fn parse_var_expr(input: &str) -> IResult<&str, Expr> {
     let (substring, (var, op, expr)) = tuple((
         parse_var,
         alt((parse_rel_op, parse_log_op)),
@@ -190,7 +189,7 @@ pub fn parse_var_expr(input: &str) -> IResult<&str, Expr> {
     Ok((substring, Expr::VarExpr(Box::new(var), op, Box::new(expr))))
 }
 
-pub fn parse_block(input: &str) -> IResult<&str, Vec<Expr>> {
+fn parse_block(input: &str) -> IResult<&str, Vec<Expr>> {
     delimited(
         terminated(multispace0, tag("{")),
         many0(alt((terminated(parse_scope, tag(";")), parse_return))),
@@ -198,7 +197,7 @@ pub fn parse_block(input: &str) -> IResult<&str, Vec<Expr>> {
     )(input)
 }
 
-pub fn parse_let(input: &str) -> IResult<&str, Expr> {
+fn parse_let(input: &str) -> IResult<&str, Expr> {
     let (substring, (var, var_type, expr)) = tuple((
         terminated(
             preceded(delimited(multispace0, tag("let"), multispace0), parse_var),
@@ -218,7 +217,7 @@ fn parse_type(input: &str) -> IResult<&str, Type> {
     delimited(
         multispace0,
         alt((
-            map(tag("i32"), |_| Type::I32),
+            map(tag("i32"), |_| Type::Int),
             map(tag("bool"), |_| Type::Bool),
             // map(tag("str"), |_| Type::Str),
             map(tag("()"), |_| Type::Void),
@@ -227,7 +226,7 @@ fn parse_type(input: &str) -> IResult<&str, Type> {
     )(input)
 }
 
-pub fn parse_if(input: &str) -> IResult<&str, Expr> {
+fn parse_if(input: &str) -> IResult<&str, Expr> {
     let (substring, (cond, block)) = tuple((
         preceded(
             delimited(multispace0, tag("if"), multispace0),
@@ -239,7 +238,7 @@ pub fn parse_if(input: &str) -> IResult<&str, Expr> {
     Ok((substring, Expr::If(Box::new(cond), block)))
 }
 
-pub fn parse_if_else(input: &str) -> IResult<&str, Expr> {
+fn parse_if_else(input: &str) -> IResult<&str, Expr> {
     let (substring, (cond, block1, block2)) = tuple((
         preceded(
             delimited(multispace0, tag("if"), multispace0),
@@ -255,7 +254,7 @@ pub fn parse_if_else(input: &str) -> IResult<&str, Expr> {
     Ok((substring, Expr::IfElse(Box::new(cond), block1, block2)))
 }
 
-pub fn parse_while(input: &str) -> IResult<&str, Expr> {
+fn parse_while(input: &str) -> IResult<&str, Expr> {
     let (substring, (cond, block)) = tuple((
         preceded(
             delimited(multispace0, tag("while"), multispace0),
@@ -267,13 +266,13 @@ pub fn parse_while(input: &str) -> IResult<&str, Expr> {
     Ok((substring, Expr::While(Box::new(cond), block)))
 }
 
-pub fn parse_param(input: &str) -> IResult<&str, (Expr, Type)> {
+fn parse_param(input: &str) -> IResult<&str, (Expr, Type)> {
     let (substring, (var, var_type)) = tuple((terminated(parse_var, tag(":")), parse_type))(input)?;
 
     Ok((substring, (var, var_type)))
 }
 
-pub fn parse_params(input: &str) -> IResult<&str, Vec<(Expr, Type)>> {
+fn parse_params(input: &str) -> IResult<&str, Vec<(Expr, Type)>> {
     let (substring, val) = delimited(
         multispace0,
         delimited(
@@ -286,7 +285,7 @@ pub fn parse_params(input: &str) -> IResult<&str, Vec<(Expr, Type)>> {
 
     Ok((substring, val))
 }
-pub fn parse_fn(input: &str) -> IResult<&str, Expr> {
+fn parse_fn(input: &str) -> IResult<&str, Expr> {
     let (substring, (var, params, return_type, block)) = tuple((
         preceded(delimited(multispace0, tag("fn"), multispace0), parse_var),
         parse_params,
@@ -305,8 +304,8 @@ mod parse_tests {
     use super::*;
 
     #[test]
-    fn test_parse_i32() {
-        assert_eq!(parse_i32("1"), Ok(("", Expr::Num(1))));
+    fn test_parser_int() {
+        assert_eq!(parser_int("1"), Ok(("", Expr::Int(1))));
     }
 
     #[test]
@@ -317,7 +316,7 @@ mod parse_tests {
 
     #[test]
     fn test_parse_type() {
-        assert_eq!(parse_type("i32"), Ok(("", Type::I32)));
+        assert_eq!(parse_type("i32"), Ok(("", Type::Int)));
         assert_eq!(parse_type("bool"), Ok(("", Type::Bool)));
         assert_eq!(parse_type("()"), Ok(("", Type::Void)));
     }
@@ -366,16 +365,16 @@ mod parse_tests {
     #[test]
     fn test_parse_bin_expr() {
         assert_eq!(parse_bin_expr("false"), Ok(("", Expr::Bool(false))));
-        assert_eq!(parse_bin_expr("1"), Ok(("", Expr::Num(1))));
-        assert_eq!(parse_bin_expr("(1)"), Ok(("", Expr::Num(1))));
+        assert_eq!(parse_bin_expr("1"), Ok(("", Expr::Int(1))));
+        assert_eq!(parse_bin_expr("(1)"), Ok(("", Expr::Int(1))));
         assert_eq!(
             parse_bin_expr("1 + 2"),
             Ok((
                 "",
                 Expr::BinExpr(
-                    Box::new(Expr::Num(1)),
+                    Box::new(Expr::Int(1)),
                     Op::AriOp(AriOp::Add),
-                    Box::new(Expr::Num(2)),
+                    Box::new(Expr::Int(2)),
                 )
             ))
         );
@@ -393,7 +392,7 @@ mod parse_tests {
         );
         assert_eq!(
             parse_return("return 1"),
-            Ok(("", Expr::Return(Box::new(Expr::Num(1)))))
+            Ok(("", Expr::Return(Box::new(Expr::Int(1)))))
         );
         assert_eq!(
             parse_return("return a"),
@@ -405,7 +404,7 @@ mod parse_tests {
                 "",
                 Expr::Return(Box::new(Expr::FnCall(
                     Box::new(Expr::Var("testfn".to_string())),
-                    vec![Expr::Num(1), Expr::Num(2), Expr::Num(3)]
+                    vec![Expr::Int(1), Expr::Int(2), Expr::Int(3)]
                 )))
             ))
         );
@@ -415,7 +414,7 @@ mod parse_tests {
                 "",
                 Expr::Return(Box::new(Expr::FnCall(
                     Box::new(Expr::Var("testfn".to_string())),
-                    vec![Expr::Num(1), Expr::Bool(false), Expr::Num(3)]
+                    vec![Expr::Int(1), Expr::Bool(false), Expr::Int(3)]
                 )))
             ))
         );
@@ -423,7 +422,7 @@ mod parse_tests {
 
     #[test]
     fn test_parse_paren() {
-        assert_eq!(parse_paren("(1)"), Ok(("", Expr::Num(1))));
+        assert_eq!(parse_paren("(1)"), Ok(("", Expr::Int(1))));
     }
 
     #[test]
@@ -433,18 +432,18 @@ mod parse_tests {
 
     #[test]
     fn test_parse_arg() {
-        assert_eq!(parse_arg("1"), Ok(("", Expr::Num(1))));
+        assert_eq!(parse_arg("1"), Ok(("", Expr::Int(1))));
     }
 
     #[test]
     fn test_parse_args() {
         assert_eq!(
             parse_args("(1, 2, 3)"),
-            Ok(("", vec![Expr::Num(1), Expr::Num(2), Expr::Num(3)]))
+            Ok(("", vec![Expr::Int(1), Expr::Int(2), Expr::Int(3)]))
         );
         assert_eq!(
             parse_args("(1, true, 3)"),
-            Ok(("", vec![Expr::Num(1), Expr::Bool(true), Expr::Num(3)]))
+            Ok(("", vec![Expr::Int(1), Expr::Bool(true), Expr::Int(3)]))
         );
     }
 
@@ -452,7 +451,7 @@ mod parse_tests {
     fn test_parse_param() {
         assert_eq!(
             parse_param("a:i32"),
-            Ok(("", (Expr::Var("a".to_string()), Type::I32)))
+            Ok(("", (Expr::Var("a".to_string()), Type::Int)))
         );
         assert_eq!(
             parse_param("a:bool"),
@@ -467,7 +466,7 @@ mod parse_tests {
             Ok((
                 "",
                 vec![
-                    (Expr::Var("a".to_string()), Type::I32),
+                    (Expr::Var("a".to_string()), Type::Int),
                     (Expr::Var("b".to_string()), Type::Bool)
                 ]
             ))
@@ -482,7 +481,7 @@ mod parse_tests {
                 "",
                 Expr::FnCall(
                     Box::new(Expr::Var("testfn".to_string())),
-                    vec![Expr::Num(1), Expr::Num(2), Expr::Num(3)]
+                    vec![Expr::Int(1), Expr::Int(2), Expr::Int(3)]
                 )
             ))
         );
@@ -492,7 +491,7 @@ mod parse_tests {
                 "",
                 Expr::FnCall(
                     Box::new(Expr::Var("testfn".to_string())),
-                    vec![Expr::Num(1), Expr::Bool(false), Expr::Num(3)]
+                    vec![Expr::Int(1), Expr::Bool(false), Expr::Int(3)]
                 )
             ))
         );
@@ -528,7 +527,7 @@ mod parse_tests {
                 Expr::VarExpr(
                     Box::new(Expr::Var("a".to_string())),
                     Op::RelOp(RelOp::Eq),
-                    Box::new(Expr::Num(1)),
+                    Box::new(Expr::Int(1)),
                 )
             ))
         );
@@ -553,11 +552,11 @@ mod parse_tests {
                 "",
                 Expr::Let(
                     Box::new(Expr::Var("a".to_string())),
-                    Type::I32,
+                    Type::Int,
                     Box::new(Expr::BinExpr(
                         Box::new(Expr::Var("".to_string())),
                         Op::AssOp(AssOp::Equ),
-                        Box::new(Expr::Num(1))
+                        Box::new(Expr::Int(1))
                     ))
                 ),
             ))
@@ -582,7 +581,7 @@ mod parse_tests {
     fn test_parse_block() {
         assert_eq!(
             parse_block("{return 1}"),
-            Ok(("", vec![Expr::Return(Box::new(Expr::Num(1)))]))
+            Ok(("", vec![Expr::Return(Box::new(Expr::Int(1)))]))
         );
         assert_eq!(
             parse_block("{let a: i32 = 1; return 1}"),
@@ -591,14 +590,14 @@ mod parse_tests {
                 vec![
                     Expr::Let(
                         Box::new(Expr::Var("a".to_string())),
-                        Type::I32,
+                        Type::Int,
                         Box::new(Expr::BinExpr(
                             Box::new(Expr::Var("".to_string())),
                             Op::AssOp(AssOp::Equ),
-                            Box::new(Expr::Num(1))
+                            Box::new(Expr::Int(1))
                         ))
                     ),
-                    Expr::Return(Box::new(Expr::Num(1)))
+                    Expr::Return(Box::new(Expr::Int(1)))
                 ]
             ))
         );
@@ -629,7 +628,7 @@ mod parse_tests {
                 "",
                 Expr::If(
                     Box::new(Expr::Bool(true)),
-                    vec![Expr::Return(Box::new(Expr::Num(1)))]
+                    vec![Expr::Return(Box::new(Expr::Int(1)))]
                 )
             ))
         );
@@ -639,7 +638,7 @@ mod parse_tests {
                 "",
                 Expr::If(
                     Box::new(Expr::Var("a".to_string())),
-                    vec![Expr::Return(Box::new(Expr::Num(1)))]
+                    vec![Expr::Return(Box::new(Expr::Int(1)))]
                 )
             ))
         );
@@ -653,7 +652,7 @@ mod parse_tests {
                         Op::RelOp(RelOp::Eq),
                         Box::new(Expr::Var("b".to_string()))
                     )),
-                    vec![Expr::Return(Box::new(Expr::Num(1)))]
+                    vec![Expr::Return(Box::new(Expr::Int(1)))]
                 ),
             ))
         );
@@ -666,8 +665,8 @@ mod parse_tests {
                 "",
                 Expr::IfElse(
                     Box::new(Expr::Bool(true)),
-                    vec![Expr::Return(Box::new(Expr::Num(1)))],
-                    vec![Expr::Return(Box::new(Expr::Num(1)))],
+                    vec![Expr::Return(Box::new(Expr::Int(1)))],
+                    vec![Expr::Return(Box::new(Expr::Int(1)))],
                 )
             ))
         );
@@ -677,8 +676,8 @@ mod parse_tests {
                 "",
                 Expr::IfElse(
                     Box::new(Expr::Var("a".to_string())),
-                    vec![Expr::Return(Box::new(Expr::Num(1)))],
-                    vec![Expr::Return(Box::new(Expr::Num(1)))],
+                    vec![Expr::Return(Box::new(Expr::Int(1)))],
+                    vec![Expr::Return(Box::new(Expr::Int(1)))],
                 )
             ))
         );
@@ -693,8 +692,8 @@ mod parse_tests {
                         Op::RelOp(RelOp::Eq),
                         Box::new(Expr::Var("b".to_string()))
                     )),
-                    vec![Expr::Return(Box::new(Expr::Num(1)))],
-                    vec![Expr::Return(Box::new(Expr::Num(1)))],
+                    vec![Expr::Return(Box::new(Expr::Int(1)))],
+                    vec![Expr::Return(Box::new(Expr::Int(1)))],
                 )
             ))
         );
@@ -721,7 +720,7 @@ mod parse_tests {
                         Op::LogOp(LogOp::And),
                         Box::new(Expr::Var("b".to_string()))
                     )),
-                    vec![Expr::Return(Box::new(Expr::Num(1)))]
+                    vec![Expr::Return(Box::new(Expr::Int(1)))]
                 ),
             ))
         );
@@ -734,9 +733,9 @@ mod parse_tests {
                 "",
                 Expr::Fn(
                     Box::new(Expr::Var("testfn".to_string())),
-                    vec![(Expr::Var("a".to_string()), Type::I32)],
+                    vec![(Expr::Var("a".to_string()), Type::Int)],
                     Type::Void,
-                    vec![Expr::Return(Box::new(Expr::Num(1)))]
+                    vec![Expr::Return(Box::new(Expr::Int(1)))]
                 ),
             ))
         );
@@ -747,17 +746,17 @@ mod parse_tests {
                 Expr::Fn(
                     Box::new(Expr::Var("testfn".to_string())),
                     vec![(Expr::Var("a".to_string()), Type::Bool)],
-                    Type::I32,
+                    Type::Int,
                     vec![Expr::If(
                         Box::new(Expr::Var("a".to_string())),
                         vec![
                             Expr::Let(
                                 Box::new(Expr::Var("b".to_string())),
-                                Type::I32,
+                                Type::Int,
                                 Box::new(Expr::BinExpr(
                                     Box::new(Expr::Var("".to_string())),
                                     Op::AssOp(AssOp::Equ),
-                                    Box::new(Expr::Num(1))
+                                    Box::new(Expr::Int(1))
                                 ))
                             ),
                             Expr::Return(Box::new(Expr::Var("b".to_string())))

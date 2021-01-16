@@ -40,9 +40,7 @@ pub fn cli() {
         // }
     } else {
         // let tree = parse_expr(program()).unwrap().1;
-        let tree = parse_fn("fn testfn(a: bool) -> i32 { if a { let b: i32 = 1; return b};}")
-            .unwrap()
-            .1;
+        let tree = parser("fn testfn(a: bool) -> i32 { if a { let b: i32 = 1; return b};} fn testfn(a: bool) -> i32 { if a { let b: i32 = 1; return b};}");
         println!("Tree = {:#?}", tree);
 
         // if type_scope(tree.clone()) {
