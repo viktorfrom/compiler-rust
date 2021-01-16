@@ -30,6 +30,7 @@ pub fn cli() {
 
     if opt.llvm {
         // let tree = parser(&program()).unwrap().1;
+        // let tree = parser(&program()).unwrap().1;
         // println!("Tree = {:#?}", tree);
 
         // if type_checker(tree.clone()) {
@@ -40,7 +41,7 @@ pub fn cli() {
         // }
     } else {
         // let tree = parse_expr(program()).unwrap().1;
-        let tree = parser("testfn(1,false,3)");
+        let tree = parse_let("    let      a       :      i32      =       1");
         println!("Tree = {:#?}", tree);
 
         // if type_scope(tree.clone()) {

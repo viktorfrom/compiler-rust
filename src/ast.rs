@@ -4,8 +4,8 @@ pub enum Expr {
     Var(String),
     Bool(bool),
 
-    BinOp(Box<Expr>, Op, Box<Expr>),
-    VarOp(Box<Expr>, Op, Box<Expr>),
+    BinExpr(Box<Expr>, Op, Box<Expr>),
+    VarExpr(Box<Expr>, Op, Box<Expr>),
 
     Let(Box<Expr>, Type, Box<Expr>),
 
@@ -13,7 +13,7 @@ pub enum Expr {
     IfElse(Box<Expr>, Vec<Expr>),
     While(Box<Expr>, Vec<Expr>),
 
-    FnCall(Box<Expr>, Vec<Expr>, Type),
+    FnCall(Box<Expr>, Vec<Expr>),
     Return(Box<Expr>),
 }
 
