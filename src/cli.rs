@@ -41,7 +41,7 @@ pub fn cli() {
         // }
     } else {
         // let tree = parse_expr(program()).unwrap().1;
-        let tree = parse_let("    let      a       :      i32      =       1");
+        let tree = parse_block("{ return 1;}");
         println!("Tree = {:#?}", tree);
 
         // if type_scope(tree.clone()) {

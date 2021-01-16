@@ -185,16 +185,13 @@ pub fn parse_var_expr(input: &str) -> IResult<&str, Expr> {
     Ok((substring, Expr::VarExpr(Box::new(var), op, Box::new(expr))))
 }
 
-// fn parse_block(input: &str) -> IResult<&str, Vec<Expr>> {
-//     delimited(
-//         tag("{"),
-//         many0(alt((
-//             terminated(parse_scope, terminated(tag(";"), multispace0)),
-//             parse_return,
-//         ))),
-//         tag("}"),
-//     )(input)
-// }
+pub fn parse_block(input: &str) -> IResult<&str, Vec<Expr>> {
+    delimited(
+        terminated(multispace0, tag("{")),
+        many0(alt((terminated(parse_scope, tag(";")), parse_return))),
+        terminated(multispace0, tag("}")),
+    )(input)
+}
 
 pub fn parse_let(input: &str) -> IResult<&str, Expr> {
     let (substring, (var, var_type, expr)) = tuple((
@@ -475,6 +472,41 @@ mod parse_tests {
                     ))
                 ),
             ))
+        );
+    }
+    #[test]
+    fn test_parse_block() {
+        assert_eq!(
+            parse_block("{return 1}"),
+            Ok(("", vec![Expr::Return(Box::new(Expr::Num(1)))]))
+        );
+        assert_eq!(
+            parse_block("{let a: i32 = 1; return 1}"),
+            Ok(("", vec![
+                Expr::Let(
+                    Box::new(Expr::Var("a".to_string())),
+                    Type::I32,
+                    Box::new(Expr::BinExpr(
+                        Box::new(Expr::Var("".to_string())),
+                        Op::AssOp(AssOp::Equ),
+                        Box::new(Expr::Num(1))
+                    ))
+                ),
+                Expr::Return(Box::new(Expr::Num(1)))]))
+        );
+        assert_eq!(
+            parse_block("{let a: bool = true; return a}"),
+            Ok(("", vec![
+                Expr::Let(
+                    Box::new(Expr::Var("a".to_string())),
+                    Type::Bool,
+                    Box::new(Expr::BinExpr(
+                        Box::new(Expr::Var("".to_string())),
+                        Op::AssOp(AssOp::Equ),
+                        Box::new(Expr::Bool(true))
+                    ))
+                ),
+                Expr::Return(Box::new(Expr::Var("a".to_string())))]))
         );
     }
 }
