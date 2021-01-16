@@ -234,6 +234,18 @@ pub fn parse_if(input: &str) -> IResult<&str, Expr> {
     Ok((substring, Expr::If(Box::new(cond), block)))
 }
 
+pub fn parse_while(input: &str) -> IResult<&str, Expr> {
+    let (substring, (cond, block)) = tuple((
+        preceded(
+            delimited(multispace0, tag("while"), multispace0),
+            alt((parse_bool, parse_var_expr)),
+        ),
+        parse_block,
+    ))(input)?;
+
+    Ok((substring, Expr::While(Box::new(cond), block)))
+}
+
 #[cfg(test)]
 mod parse_tests {
     use super::*;
@@ -549,6 +561,33 @@ mod parse_tests {
                     Box::new(Expr::VarExpr(
                         Box::new(Expr::Var("a".to_string())),
                         Op::RelOp(RelOp::Eq),
+                        Box::new(Expr::Var("b".to_string()))
+                    )),
+                    vec![Expr::Return(Box::new(Expr::Num(1)))]
+                ),
+            ))
+        );
+    }
+    #[test]
+    fn test_parse_while() {
+        assert_eq!(
+            parse_while("while false {return true}"),
+            Ok((
+                "",
+                Expr::While(
+                    Box::new(Expr::Bool(false)),
+                    vec![Expr::Return(Box::new(Expr::Bool(true)))]
+                )
+            ))
+        );
+        assert_eq!(
+            parse_while("while a && b {return 1}"),
+            Ok((
+                "",
+                Expr::While(
+                    Box::new(Expr::VarExpr(
+                        Box::new(Expr::Var("a".to_string())),
+                        Op::LogOp(LogOp::And),
                         Box::new(Expr::Var("b".to_string()))
                     )),
                     vec![Expr::Return(Box::new(Expr::Num(1)))]
