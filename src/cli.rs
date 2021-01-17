@@ -39,8 +39,10 @@ pub fn cli() {
         //     panic!("ERROR: Typechecker failed!");
         // }
     } else {
-        // let tree = parse_expr(program()).unwrap().1;
-        let tree = parser("fn testfn(a: bool) -> i32 { if a { let b: i32 = 1; return b};} fn testfn(a: bool) -> i32 { if a { let b: i32 = 1; return b};}");
+        // let tree = parser(&program()).unwrap().1;
+        // let tree = parse_let("let variable: i32 = a;");
+        let tree = parser("let a: i32 = b +1 ;");
+
         println!("Tree = {:#?}", tree);
 
         // if type_scope(tree.clone()) {

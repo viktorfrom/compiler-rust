@@ -18,13 +18,13 @@ fn parse_scope(input: &str) -> IResult<&str, Expr> {
     delimited(
         multispace0,
         alt((
-            // parse_var_expr,
-            parse_fn,
+            parse_return,
+            parse_let,
             parse_if,
             parse_if_else,
             parse_while,
-            parse_let,
-            parse_return,
+            // parse_var_expr,
+            parse_fn,
         )),
         multispace0,
     )(input)
@@ -210,7 +210,13 @@ pub fn parse_let(input: &str) -> IResult<&str, Expr> {
             tag(":"),
         ),
         parse_type,
-        parse_bin_expr
+        alt((
+            parse_bin_expr,
+            preceded(
+                delimited(multispace0, tag("="), multispace0),
+                alt((parse_var_expr, parse_var)),
+            ),
+        )),
     ))(input)?;
 
     Ok((
@@ -564,6 +570,32 @@ mod parse_tests {
                         Box::new(Expr::Var("".to_string())),
                         Op::AssOp(AssOp::Equ),
                         Box::new(Expr::Int(1))
+                    ))
+                ),
+            ))
+        );
+        assert_eq!(
+            parse_let("let a: i32 = b"),
+            Ok((
+                "",
+                Expr::Let(
+                    Box::new(Expr::Var("a".to_string())),
+                    Type::Int,
+                    Box::new(Expr::Var("b".to_string()))
+                ),
+            ))
+        );
+        assert_eq!(
+            parse_let("let a: bool = b && c"),
+            Ok((
+                "",
+                Expr::Let(
+                    Box::new(Expr::Var("a".to_string())),
+                    Type::Bool,
+                    Box::new(Expr::VarExpr(
+                        Box::new(Expr::Var("b".to_string())),
+                        Op::LogOp(LogOp::And),
+                        Box::new(Expr::Var("c".to_string())),
                     ))
                 ),
             ))
