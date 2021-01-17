@@ -20,8 +20,8 @@ fn parse_scope(input: &str) -> IResult<&str, Expr> {
         alt((
             parse_return,
             parse_let,
-            parse_if,
             parse_if_else,
+            parse_if,
             parse_while,
             // parse_var_expr,
             parse_fn,
@@ -50,7 +50,7 @@ fn parse_bool(input: &str) -> IResult<&str, Expr> {
 fn parse_op(input: &str) -> IResult<&str, Op> {
     delimited(
         multispace0,
-        alt((parse_ari_op, parse_log_op, parse_ass_op, parse_rel_op)),
+        alt((parse_rel_op, parse_log_op, parse_ass_op, parse_ari_op)),
         multispace0,
     )(input)
 }
@@ -179,11 +179,8 @@ fn parse_args(input: &str) -> IResult<&str, Vec<Expr>> {
 }
 
 fn parse_var_expr(input: &str) -> IResult<&str, Expr> {
-    let (substring, (var, op, expr)) = tuple((
-        parse_var,
-        alt((parse_rel_op, parse_log_op)),
-        alt((parse_bin_expr, parse_var)),
-    ))(input)?;
+    let (substring, (var, op, expr)) =
+        tuple((parse_var, parse_op, alt((parse_bin_expr, parse_var))))(input)?;
 
     Ok((substring, Expr::VarExpr(Box::new(var), op, Box::new(expr))))
 }
@@ -595,6 +592,21 @@ mod parse_tests {
                     Box::new(Expr::VarExpr(
                         Box::new(Expr::Var("b".to_string())),
                         Op::LogOp(LogOp::And),
+                        Box::new(Expr::Var("c".to_string())),
+                    ))
+                ),
+            ))
+        );
+        assert_eq!(
+            parse_let("let a: i32 = b + c"),
+            Ok((
+                "",
+                Expr::Let(
+                    Box::new(Expr::Var("a".to_string())),
+                    Type::Int,
+                    Box::new(Expr::VarExpr(
+                        Box::new(Expr::Var("b".to_string())),
+                        Op::AriOp(AriOp::Add),
                         Box::new(Expr::Var("c".to_string())),
                     ))
                 ),
