@@ -39,9 +39,9 @@ pub fn cli() {
         //     panic!("ERROR: Typechecker failed!");
         // }
     } else {
-        let tree = parser(&program()).unwrap().1;
+        // let tree = parser(&program()).unwrap().1;
         // let tree = parse_let("let variable: i32 = a;");
-        // let tree = parser("let a: i32 = b + c");
+        let tree = parser("return a +2 ");
 
         println!("Tree = {:#?}", tree);
 

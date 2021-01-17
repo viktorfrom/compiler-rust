@@ -129,7 +129,10 @@ fn parse_bin_expr(input: &str) -> IResult<&str, Expr> {
 fn parse_return(input: &str) -> IResult<&str, Expr> {
     let (substring, val) = delimited(
         multispace0,
-        preceded(tag("return"), alt((parse_bin_expr, parse_var))),
+        preceded(
+            tag("return"),
+            alt((parse_bin_expr, parse_var_expr, parse_var)),
+        ),
         multispace0,
     )(input)?;
 
@@ -408,12 +411,24 @@ mod parse_tests {
             Ok(("", Expr::Return(Box::new(Expr::Var("a".to_string())))))
         );
         assert_eq!(
-            parse_return("return testfn(1,2,3)"),
+            parse_return("return a + b"),
             Ok((
                 "",
-                Expr::Return(Box::new(Expr::FnCall(
-                    Box::new(Expr::Var("testfn".to_string())),
-                    vec![Expr::Int(1), Expr::Int(2), Expr::Int(3)]
+                Expr::Return(Box::new(Expr::VarExpr(
+                    Box::new(Expr::Var("a".to_string())),
+                    Op::AriOp(AriOp::Add),
+                    Box::new(Expr::Var("b".to_string())),
+                )))
+            ))
+        );
+        assert_eq!(
+            parse_return("return a + 1"),
+            Ok((
+                "",
+                Expr::Return(Box::new(Expr::BinExpr(
+                    Box::new(Expr::Var("a".to_string())),
+                    Op::AriOp(AriOp::Add),
+                    Box::new(Expr::Int(1)),
                 )))
             ))
         );
