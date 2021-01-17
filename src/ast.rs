@@ -15,6 +15,7 @@ pub enum Expr {
 
     Fn(Box<Expr>, Vec<(Expr, Type)>, Type, Vec<Expr>),
     FnCall(Box<Expr>, Vec<Expr>),
+
     Return(Box<Expr>),
 }
 
@@ -44,11 +45,11 @@ pub enum AriOp {
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum AssOp {
-    Equ,
-    PluEqu,
-    SubEqu,
-    DivEqu,
-    MulEqu,
+    Eq,
+    AddEq,
+    SubEq,
+    DivEq,
+    MulEq,
 }
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum LogOp {

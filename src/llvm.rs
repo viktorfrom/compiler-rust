@@ -214,16 +214,16 @@
 
 //     fn compile_rel_op(&self, l: IntValue<'ctx>, op: RelOp, r: IntValue<'ctx>) -> IntValue<'ctx> {
 //         match op {
-//             RelOp::EquEqu => self
+//             RelOp::EqEq => self
 //                 .builder
-//                 .build_int_compare(IntPredicate::EQ, l, r, "tmpequ"),
-//             RelOp::NotEqu => self
+//                 .build_int_compare(IntPredicate::EQ, l, r, "tmpEq"),
+//             RelOp::NotEq => self
 //                 .builder
 //                 .build_int_compare(IntPredicate::NE, l, r, "tmpneq"),
-//             RelOp::LesEqu => self
+//             RelOp::LesEq => self
 //                 .builder
 //                 .build_int_compare(IntPredicate::SLE, l, r, "tmpleq"),
-//             RelOp::GreEqu => self
+//             RelOp::GreEq => self
 //                 .builder
 //                 .build_int_compare(IntPredicate::SGE, l, r, "tmpgeq"),
 //             RelOp::Gre => self

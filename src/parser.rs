@@ -72,11 +72,11 @@ fn parse_ass_op(input: &str) -> IResult<&str, Op> {
     delimited(
         multispace0,
         alt((
-            map(tag("="), |_| Op::AssOp(AssOp::Equ)),
-            map(tag("+="), |_| Op::AssOp(AssOp::PluEqu)),
-            map(tag("-="), |_| Op::AssOp(AssOp::SubEqu)),
-            map(tag("/="), |_| Op::AssOp(AssOp::DivEqu)),
-            map(tag("*="), |_| Op::AssOp(AssOp::MulEqu)),
+            map(tag("="), |_| Op::AssOp(AssOp::Eq)),
+            map(tag("+="), |_| Op::AssOp(AssOp::AddEq)),
+            map(tag("-="), |_| Op::AssOp(AssOp::SubEq)),
+            map(tag("/="), |_| Op::AssOp(AssOp::DivEq)),
+            map(tag("*="), |_| Op::AssOp(AssOp::MulEq)),
         )),
         multispace0,
     )(input)
@@ -340,7 +340,7 @@ mod parse_tests {
     #[test]
     fn test_parse_op() {
         assert_eq!(parse_op("+"), Ok(("", Op::AriOp(AriOp::Add))));
-        assert_eq!(parse_op("="), Ok(("", Op::AssOp(AssOp::Equ))));
+        assert_eq!(parse_op("="), Ok(("", Op::AssOp(AssOp::Eq))));
         assert_eq!(parse_op("&&"), Ok(("", Op::LogOp(LogOp::And))));
         assert_eq!(parse_op(">"), Ok(("", Op::RelOp(RelOp::Gre))));
     }
@@ -355,11 +355,11 @@ mod parse_tests {
 
     #[test]
     fn test_parse_ass_op() {
-        assert_eq!(parse_ass_op("="), Ok(("", Op::AssOp(AssOp::Equ))));
-        assert_eq!(parse_ass_op("+="), Ok(("", Op::AssOp(AssOp::PluEqu))));
-        assert_eq!(parse_ass_op("-="), Ok(("", Op::AssOp(AssOp::SubEqu))));
-        assert_eq!(parse_ass_op("/="), Ok(("", Op::AssOp(AssOp::DivEqu))));
-        assert_eq!(parse_ass_op("*="), Ok(("", Op::AssOp(AssOp::MulEqu))));
+        assert_eq!(parse_ass_op("="), Ok(("", Op::AssOp(AssOp::Eq))));
+        assert_eq!(parse_ass_op("+="), Ok(("", Op::AssOp(AssOp::AddEq))));
+        assert_eq!(parse_ass_op("-="), Ok(("", Op::AssOp(AssOp::SubEq))));
+        assert_eq!(parse_ass_op("/="), Ok(("", Op::AssOp(AssOp::DivEq))));
+        assert_eq!(parse_ass_op("*="), Ok(("", Op::AssOp(AssOp::MulEq))));
     }
 
     #[test]
@@ -533,7 +533,7 @@ mod parse_tests {
                 "",
                 Expr::VarExpr(
                     Box::new(Expr::Var("a".to_string())),
-                    Op::AssOp(AssOp::Equ),
+                    Op::AssOp(AssOp::Eq),
                     Box::new(Expr::Int(1)),
                 )
             ))
@@ -595,7 +595,7 @@ mod parse_tests {
                     Type::Int,
                     Box::new(Expr::BinExpr(
                         Box::new(Expr::Var("".to_string())),
-                        Op::AssOp(AssOp::Equ),
+                        Op::AssOp(AssOp::Eq),
                         Box::new(Expr::Int(1))
                     ))
                 ),
@@ -651,7 +651,7 @@ mod parse_tests {
                     Type::Bool,
                     Box::new(Expr::BinExpr(
                         Box::new(Expr::Var("".to_string())),
-                        Op::AssOp(AssOp::Equ),
+                        Op::AssOp(AssOp::Eq),
                         Box::new(Expr::Bool(true))
                     ))
                 ),
@@ -678,7 +678,7 @@ mod parse_tests {
                         Type::Int,
                         Box::new(Expr::BinExpr(
                             Box::new(Expr::Var("".to_string())),
-                            Op::AssOp(AssOp::Equ),
+                            Op::AssOp(AssOp::Eq),
                             Box::new(Expr::Int(1))
                         ))
                     ),
@@ -696,7 +696,7 @@ mod parse_tests {
                         Type::Bool,
                         Box::new(Expr::BinExpr(
                             Box::new(Expr::Var("".to_string())),
-                            Op::AssOp(AssOp::Equ),
+                            Op::AssOp(AssOp::Eq),
                             Box::new(Expr::Bool(true))
                         ))
                     ),
@@ -840,7 +840,7 @@ mod parse_tests {
                                 Type::Int,
                                 Box::new(Expr::BinExpr(
                                     Box::new(Expr::Var("".to_string())),
-                                    Op::AssOp(AssOp::Equ),
+                                    Op::AssOp(AssOp::Eq),
                                     Box::new(Expr::Int(1))
                                 ))
                             ),
@@ -901,7 +901,7 @@ mod parse_tests {
                                 Type::Int,
                                 Box::new(Expr::BinExpr(
                                     Box::new(Expr::Var("".to_string())),
-                                    Op::AssOp(AssOp::Equ),
+                                    Op::AssOp(AssOp::Eq),
                                     Box::new(Expr::Int(2)),
                                 )),
                             ),
@@ -913,7 +913,7 @@ mod parse_tests {
                                         Type::Int,
                                         Box::new(Expr::BinExpr(
                                             Box::new(Expr::Var("".to_string())),
-                                            Op::AssOp(AssOp::Equ),
+                                            Op::AssOp(AssOp::Eq),
                                             Box::new(Expr::Int(1)),
                                         )),
                                     ),
@@ -954,7 +954,7 @@ mod parse_tests {
                                 Type::Int,
                                 Box::new(Expr::BinExpr(
                                     Box::new(Expr::Var("".to_string())),
-                                    Op::AssOp(AssOp::Equ),
+                                    Op::AssOp(AssOp::Eq),
                                     Box::new(Expr::Int(0)),
                                 )),
                             ),
@@ -967,12 +967,12 @@ mod parse_tests {
                                 vec![
                                     Expr::VarExpr(
                                         Box::new(Expr::Var("n".to_string())),
-                                        Op::AssOp(AssOp::PluEqu),
+                                        Op::AssOp(AssOp::AddEq),
                                         Box::new(Expr::Int(1)),
                                     ),
                                     Expr::VarExpr(
                                         Box::new(Expr::Var("d".to_string())),
-                                        Op::AssOp(AssOp::Equ),
+                                        Op::AssOp(AssOp::Eq),
                                         Box::new(Expr::Bool(false)),
                                     ),
                                 ],
@@ -990,7 +990,7 @@ mod parse_tests {
                                 Type::Int,
                                 Box::new(Expr::BinExpr(
                                     Box::new(Expr::Var("".to_string())),
-                                    Op::AssOp(AssOp::Equ),
+                                    Op::AssOp(AssOp::Eq),
                                     Box::new(Expr::FnCall(
                                         Box::new(Expr::Var("testfn2".to_string())),
                                         vec![],
@@ -1002,7 +1002,7 @@ mod parse_tests {
                                 Type::Int,
                                 Box::new(Expr::BinExpr(
                                     Box::new(Expr::Var("".to_string())),
-                                    Op::AssOp(AssOp::Equ),
+                                    Op::AssOp(AssOp::Eq),
                                     Box::new(Expr::FnCall(
                                         Box::new(Expr::Var("testfn3".to_string())),
                                         vec![Expr::Bool(true), Expr::Bool(true)],

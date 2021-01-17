@@ -39,10 +39,10 @@
 //         },
 
 //         Expr::RelOp(op) => match op {
-//             RelOp::EquEqu => Content::ContentOp(ContentOp::EquEqu),
-//             RelOp::NotEqu => Content::ContentOp(ContentOp::NotEqu),
-//             RelOp::LesEqu => Content::ContentOp(ContentOp::LesEqu),
-//             RelOp::GreEqu => Content::ContentOp(ContentOp::GreEqu),
+//             RelOp::EqEq => Content::ContentOp(ContentOp::EqEq),
+//             RelOp::NotEq => Content::ContentOp(ContentOp::NotEq),
+//             RelOp::LesEq => Content::ContentOp(ContentOp::LesEq),
+//             RelOp::GreEq => Content::ContentOp(ContentOp::GreEq),
 //             RelOp::Les => Content::ContentOp(ContentOp::Les),
 //             RelOp::Gre => Content::ContentOp(ContentOp::Gre),
 //         },
