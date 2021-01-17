@@ -23,7 +23,7 @@ fn parse_scope(input: &str) -> IResult<&str, Expr> {
             parse_if_else,
             parse_if,
             parse_while,
-            // parse_var_expr,
+            parse_var_expr,
             parse_fn,
         )),
         multispace0,
@@ -131,7 +131,7 @@ fn parse_return(input: &str) -> IResult<&str, Expr> {
         multispace0,
         preceded(
             tag("return"),
-            alt((parse_bin_expr, parse_var_expr, parse_var)),
+            alt((parse_paren, parse_bin_expr, parse_var_expr, parse_var)),
         ),
         multispace0,
     )(input)?;
@@ -142,7 +142,11 @@ fn parse_return(input: &str) -> IResult<&str, Expr> {
 fn parse_paren(input: &str) -> IResult<&str, Expr> {
     delimited(
         multispace0,
-        delimited(tag("("), parse_bin_expr, tag(")")),
+        delimited(
+            tag("("),
+            alt((parse_bin_expr, parse_var_expr, parse_var)),
+            tag(")"),
+        ),
         multispace0,
     )(input)
 }
@@ -833,6 +837,175 @@ mod parse_tests {
                         ]
                     )]
                 ),
+            ))
+        );
+    }
+
+    #[test]
+    fn test_parser() {
+        assert_eq!(
+            parser(
+                "        
+                fn testfn1(a: bool) -> i32 {
+                    let c: i32 = (((2)));
+                    if a {
+                        let b: i32 = 1;
+                        return b
+                    } else {
+                        return (c)
+                    };
+                }
+
+                fn testfn2() -> i32 {
+                    {{{ return testfn1(true); }}}
+                }
+
+                fn testfn3(b: bool, c: bool) -> i32 {
+                    let d: bool = b && c;
+                    let n: i32 = 0;
+                    while d == true {
+                        n += 1;
+                        d = false;
+                    };
+                    return n;    
+                }
+
+                fn main() -> i32 {
+                    let a: i32 = testfn2(); 
+                    let b: i32 = testfn3(true, true);
+                    return a + b
+                }
+                "
+            ),
+            Ok((
+                "",
+                vec![
+                    Expr::Fn(
+                        Box::new(Expr::Var("testfn1".to_string())),
+                        vec![(Expr::Var("a".to_string()), Type::Bool)],
+                        Type::Int,
+                        vec![
+                            Expr::Let(
+                                Box::new(Expr::Var("c".to_string())),
+                                Type::Int,
+                                Box::new(Expr::BinExpr(
+                                    Box::new(Expr::Var("".to_string())),
+                                    Op::AssOp(AssOp::Equ),
+                                    Box::new(Expr::Int(2)),
+                                )),
+                            ),
+                            Expr::IfElse(
+                                Box::new(Expr::Var("a".to_string())),
+                                vec![
+                                    Expr::Let(
+                                        Box::new(Expr::Var("b".to_string())),
+                                        Type::Int,
+                                        Box::new(Expr::BinExpr(
+                                            Box::new(Expr::Var("".to_string())),
+                                            Op::AssOp(AssOp::Equ),
+                                            Box::new(Expr::Int(1)),
+                                        )),
+                                    ),
+                                    Expr::Return(Box::new(Expr::Var("b".to_string()))),
+                                ],
+                                vec![Expr::Return(Box::new(Expr::Var("c".to_string())))],
+                            ),
+                        ],
+                    ),
+                    Expr::Fn(
+                        Box::new(Expr::Var("testfn2".to_string())),
+                        vec![],
+                        Type::Int,
+                        vec![Expr::Return(Box::new(Expr::FnCall(
+                            Box::new(Expr::Var("testfn1".to_string())),
+                            vec![Expr::Bool(true)],
+                        )))],
+                    ),
+                    Expr::Fn(
+                        Box::new(Expr::Var("testfn3".to_string())),
+                        vec![
+                            (Expr::Var("b".to_string()), Type::Bool),
+                            (Expr::Var("c".to_string()), Type::Bool),
+                        ],
+                        Type::Int,
+                        vec![
+                            Expr::Let(
+                                Box::new(Expr::Var("d".to_string())),
+                                Type::Bool,
+                                Box::new(Expr::VarExpr(
+                                    Box::new(Expr::Var("b".to_string())),
+                                    Op::LogOp(LogOp::And),
+                                    Box::new(Expr::Var("c".to_string())),
+                                )),
+                            ),
+                            Expr::Let(
+                                Box::new(Expr::Var("n".to_string())),
+                                Type::Int,
+                                Box::new(Expr::BinExpr(
+                                    Box::new(Expr::Var("".to_string())),
+                                    Op::AssOp(AssOp::Equ),
+                                    Box::new(Expr::Int(0)),
+                                )),
+                            ),
+                            Expr::While(
+                                Box::new(Expr::VarExpr(
+                                    Box::new(Expr::Var("d".to_string())),
+                                    Op::RelOp(RelOp::Eq),
+                                    Box::new(Expr::Bool(true)),
+                                )),
+                                vec![
+                                    Expr::VarExpr(
+                                        Box::new(Expr::Var("n".to_string())),
+                                        Op::AssOp(AssOp::PluEqu),
+                                        Box::new(Expr::Int(1)),
+                                    ),
+                                    Expr::VarExpr(
+                                        Box::new(Expr::Var("d".to_string())),
+                                        Op::AssOp(AssOp::Equ),
+                                        Box::new(Expr::Bool(false)),
+                                    ),
+                                ],
+                            ),
+                            Expr::Return(Box::new(Expr::Var("n".to_string()))),
+                        ],
+                    ),
+                    Expr::Fn(
+                        Box::new(Expr::Var("main".to_string())),
+                        vec![],
+                        Type::Int,
+                        vec![
+                            Expr::Let(
+                                Box::new(Expr::Var("a".to_string())),
+                                Type::Int,
+                                Box::new(Expr::BinExpr(
+                                    Box::new(Expr::Var("".to_string())),
+                                    Op::AssOp(AssOp::Equ),
+                                    Box::new(Expr::FnCall(
+                                        Box::new(Expr::Var("testfn2".to_string())),
+                                        vec![],
+                                    )),
+                                )),
+                            ),
+                            Expr::Let(
+                                Box::new(Expr::Var("b".to_string())),
+                                Type::Int,
+                                Box::new(Expr::BinExpr(
+                                    Box::new(Expr::Var("".to_string())),
+                                    Op::AssOp(AssOp::Equ),
+                                    Box::new(Expr::FnCall(
+                                        Box::new(Expr::Var("testfn3".to_string())),
+                                        vec![Expr::Bool(true), Expr::Bool(true)],
+                                    )),
+                                )),
+                            ),
+                            Expr::Return(Box::new(Expr::VarExpr(
+                                Box::new(Expr::Var("a".to_string())),
+                                Op::AriOp(AriOp::Add),
+                                Box::new(Expr::Var("b".to_string())),
+                            ))),
+                        ],
+                    ),
+                ]
             ))
         );
     }

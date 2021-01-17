@@ -29,7 +29,6 @@ pub fn cli() {
 
     if opt.llvm {
         // let tree = parser(&program()).unwrap().1;
-        // let tree = parser(&program()).unwrap().1;
         // println!("Tree = {:#?}", tree);
 
         // if type_checker(tree.clone()) {
@@ -39,10 +38,7 @@ pub fn cli() {
         //     panic!("ERROR: Typechecker failed!");
         // }
     } else {
-        // let tree = parser(&program()).unwrap().1;
-        // let tree = parse_let("let variable: i32 = a;");
-        let tree = parser("return a +2 ");
-
+        let tree = parser(&program()).unwrap().1;
         println!("Tree = {:#?}", tree);
 
         // if type_scope(tree.clone()) {
