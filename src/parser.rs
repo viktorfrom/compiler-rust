@@ -30,7 +30,7 @@ fn parse_scope(input: &str) -> IResult<&str, Expr> {
     )(input)
 }
 
-fn parser_int(input: &str) -> IResult<&str, Expr> {
+fn parse_int(input: &str) -> IResult<&str, Expr> {
     let (substring, digit) = delimited(multispace0, digit1, multispace0)(input)?;
 
     Ok((substring, Expr::Int(digit.parse::<i32>().unwrap())))
@@ -113,14 +113,14 @@ fn parse_bin_expr(input: &str) -> IResult<&str, Expr> {
     alt((
         map(
             tuple((
-                alt((parse_bool, parser_int, parse_paren, parse_fn_call, parse_var)),
+                alt((parse_bool, parse_int, parse_paren, parse_fn_call, parse_var)),
                 parse_op,
                 parse_bin_expr,
             )),
             |(left, op, right)| Expr::BinExpr(Box::new(left), op, Box::new(right)),
         ),
         parse_bool,
-        parser_int,
+        parse_int,
         parse_paren,
         parse_fn_call,
         // parse_var,
@@ -304,8 +304,8 @@ mod parse_tests {
     use super::*;
 
     #[test]
-    fn test_parser_int() {
-        assert_eq!(parser_int("1"), Ok(("", Expr::Int(1))));
+    fn test_parse_int() {
+        assert_eq!(parse_int("1"), Ok(("", Expr::Int(1))));
     }
 
     #[test]
