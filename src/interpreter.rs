@@ -1,269 +1,187 @@
-// use crate::ast::content_tree::*;
-// use crate::ast::expr_tree::*;
-// use crate::memory::*;
+use crate::memory::*;
+use crate::{ast::*, memory};
 
-// pub fn eval_scope(scope: Vec<Expr>) -> Content {
-//     let mut res: Content = Content::Null;
-//     for expr in scope.iter() {
-//         res = eval_expr(expr.clone());
-//         match res {
-//             _ => continue,
-//         }
-//     }
-//     return res;
-// }
+pub fn interpreter(tree: Vec<Expr>) -> ExprRep {
+    let mut res = ExprRep::Null;
+    for expr in tree.iter() {
+        res = eval_expr(expr.clone());
+        match res {
+            _ => continue,
+        }
+    }
+    return res;
+}
 
-// fn eval_expr(input: Expr) -> Content {
-//     match input {
-//         Expr::Num(i) => Content::Num(i),
-//         Expr::Bool(b) => Content::Bool(b),
-//         Expr::Str(s) => Content::Str(s),
+fn eval_expr(expr: Expr) -> ExprRep {
+    match expr {
+        Expr::Int(i) => ExprRep::Int(i),
+        Expr::Bool(b) => ExprRep::Bool(b),
+        Expr::Var(n) => read_from_var(&n),
 
-//         Expr::ArithOp(op) => match op {
-//             ArithOp::Add => Content::ContentOp(ContentOp::Add),
-//             ArithOp::Sub => Content::ContentOp(ContentOp::Sub),
-//             ArithOp::Mult => Content::ContentOp(ContentOp::Mult),
-//             ArithOp::Div => Content::ContentOp(ContentOp::Div),
-//         },
+        Expr::BinExpr(l, op, r) => eval_bin_expr(*l, op, *r),
+        Expr::VarExpr(var, op, expr) => eval_var_expr(*var, op, *expr),
 
-//         Expr::LogicOp(op) => match op {
-//             LogicOp::And => Content::ContentOp(ContentOp::And),
-//             LogicOp::Or => Content::ContentOp(ContentOp::Or),
-//             LogicOp::Not => Content::ContentOp(ContentOp::Not),
-//         },
+        _ => panic!("Invalid expr!"),
+    }
+}
 
-//         // TODO: Assign operators not working properly
-//         Expr::AssignOp(op) => match op {
-//             AssignOp::Equ => Content::ContentOp(ContentOp::Equ),
-//             AssignOp::PluEqu => Content::ContentOp(ContentOp::PluEqu),
-//             AssignOp::SubEqu => Content::ContentOp(ContentOp::SubEqu),
-//             AssignOp::DivEqu => Content::ContentOp(ContentOp::DivEqu),
-//         },
+fn eval_bin_expr(l: Expr, op: Op, r: Expr) -> ExprRep {
+    match (l, r) {
+        (Expr::Int(left), Expr::Int(right)) => eval_op(left, op, right),
+        _ => panic!("Invalid bin expr!"),
+    }
+}
+/// Inserts the variable into memory or updates the value if it already exists
+fn eval_var_expr(var: Expr, op: Op, expr: Expr) -> ExprRep {
+    match op {
+        Op::AssOp(AssOp::Equ) => match (var.clone(), eval_expr(expr)) {
+            (Expr::Var(n), ExprRep::Int(val)) => insert_var(ExprRep::Var(n), ExprRep::Int(val)),
+            _ => panic!(),
+        },
+        Op::AssOp(AssOp::PluEqu) => match (var.clone(), eval_expr(var), eval_expr(expr)) {
+            (Expr::Var(n), ExprRep::Int(old_val), ExprRep::Int(new_val)) => {
+                insert_var(ExprRep::Var(n), ExprRep::Int(old_val + new_val))
+            }
+            _ => panic!(),
+        },
+        Op::AssOp(AssOp::SubEqu) => match (var.clone(), eval_expr(var), eval_expr(expr)) {
+            (Expr::Var(n), ExprRep::Int(old_val), ExprRep::Int(new_val)) => {
+                insert_var(ExprRep::Var(n), ExprRep::Int(old_val - new_val))
+            }
+            _ => panic!(),
+        },
+        Op::AssOp(AssOp::DivEqu) => match (var.clone(), eval_expr(var), eval_expr(expr)) {
+            (Expr::Var(n), ExprRep::Int(old_val), ExprRep::Int(new_val)) => {
+                insert_var(ExprRep::Var(n), ExprRep::Int(old_val / new_val))
+            }
+            _ => panic!(),
+        },
+        Op::AssOp(AssOp::MulEqu) => match (var.clone(), eval_expr(var), eval_expr(expr)) {
+            (Expr::Var(n), ExprRep::Int(old_val), ExprRep::Int(new_val)) => {
+                insert_var(ExprRep::Var(n), ExprRep::Int(old_val * new_val))
+            }
+            _ => panic!(),
+        },
+        _ => panic!("Invalid var expr!"),
+    }
+}
 
-//         Expr::RelOp(op) => match op {
-//             RelOp::EquEqu => Content::ContentOp(ContentOp::EquEqu),
-//             RelOp::NotEqu => Content::ContentOp(ContentOp::NotEqu),
-//             RelOp::LesEqu => Content::ContentOp(ContentOp::LesEqu),
-//             RelOp::GreEqu => Content::ContentOp(ContentOp::GreEqu),
-//             RelOp::Les => Content::ContentOp(ContentOp::Les),
-//             RelOp::Gre => Content::ContentOp(ContentOp::Gre),
-//         },
+fn eval_op(l: i32, op: Op, r: i32) -> ExprRep {
+    match op {
+        Op::AriOp(op) => eval_ari_op(l, op, r),
+        // Op::AssOp(op) => eval_ass_op(l, op, r),
+        // Op::LogOp(op) => eval_log_op(l, op, r),
+        // Op::RelOp(op) => eval_rel_op(l, op, r),
+        _ => panic!("Invalid bin expr!"),
+    }
+}
 
-//         Expr::Type(op) => match op {
-//             Type::Integer => Content::ContentOp(ContentOp::Integer),
-//             Type::Bool => Content::ContentOp(ContentOp::Bool),
-//             Type::Str => Content::ContentOp(ContentOp::Str),
-//             Type::Void => Content::ContentOp(ContentOp::Void),
-//         },
+fn eval_ari_op(l: i32, ari_op: AriOp, r: i32) -> ExprRep {
+    match ari_op {
+        AriOp::Add => ExprRep::Int(l + r),
+        AriOp::Sub => ExprRep::Int(l - r),
+        AriOp::Div => ExprRep::Int(l / r),
+        AriOp::Mul => ExprRep::Int(l * r),
+    }
+}
 
-//         Expr::Return(return_param, var) => match *var {
-//             Expr::Str(var) => eval_return(&return_param, &var.to_string()),
-//             Expr::Num(var) => Content::Return(return_param, Box::new(Content::Num(var))),
-//             Expr::Bool(var) => Content::Return(return_param, Box::new(Content::Bool(var))),
-//             _ => panic!("Invalid Input!"),
-//         },
-
-//         Expr::Func(func_name, params, block) => eval_func(eval_expr(*func_name), params, block),
-
-//         Expr::While(_while_param, var, block) => eval_if_while(eval_expr(*var), block),
-//         Expr::If(if_param, block) => eval_if_while(eval_expr(*if_param), block),
-
-//         Expr::Param(param, _param_type) => match *param {
-//             Expr::Str(param) => {
-//                 insert_var(Content::Str(param.clone()), Content::Str(param.clone()))
-//             }
-//             _ => panic!("Invalid Input!"),
-//         },
-
-//         Expr::FuncInput(var, func_name, block) => match *func_name {
-//             Expr::Str(func_name) => eval_func_input(eval_expr(*var), &func_name.to_string(), block),
-//             _ => panic!("Invalid Input!"),
-//         },
-
-//         Expr::Let(left, operator, right) => match *left {
-//             Expr::Num(left) => eval_i32(
-//                 eval_expr(Expr::Num(left)),
-//                 eval_expr(*operator),
-//                 eval_expr(*right),
-//             ),
-//             Expr::Bool(left) => eval_bool(
-//                 eval_expr(Expr::Bool(left)),
-//                 eval_expr(*operator),
-//                 eval_expr(*right),
-//             ),
-//             Expr::Str(left) => eval_let(
-//                 eval_expr(Expr::Str(left)),
-//                 eval_expr(*operator),
-//                 eval_expr(*right),
-//             ),
-//             _ => (panic!("Invalid input!")),
-//         },
-//         // _ => (panic!("Invalid input!")),
+// fn eval_ass_op(l: i32, ass_op: AssOp, r: i32) -> ExprRep {
+//     match ass_op {
+//         AssOp::Equ => ExprRep::Int(l + r),
+//         AssOp::PluEqu => ExprRep::Int(l + r),
+//         AssOp::SubEqu => ExprRep::Int(l + r),
+//         AssOp::DivEqu => ExprRep::Int(l + r),
+//         AssOp::MulEqu => ExprRep::Int(l + r),
 //     }
 // }
 
-// fn eval_if_while(if_param: Content, block: Vec<Expr>) -> Content {
-//     match if_param {
-//         Content::Bool(true) => eval_block(block),
-//         Content::Bool(false) => Content::Null,
-//         Content::Str(s) => match read_from_var(&s.to_string()) {
-//             Content::Bool(true) => eval_block(block),
-//             _ => Content::Null,
-//         },
-//         _ => (panic!("Invalid input!")),
+// fn eval_log_op(l: bool, ari_op: LogOp, r: bool) -> ExprRep {
+//     match ari_op {
+//         LogOp::And => ExprRep::Bool(l && r),
+//         LogOp::Or => ExprRep::Bool(l || r),
 //     }
 // }
 
-// fn eval_params(params: Vec<Expr>, args: Vec<Expr>) {
-//     if params.len() != args.len() {
-//         panic!(
-//             "ERROR: Wrong amount of arguments. Expected {} found {}",
-//             params.len(),
-//             args.len()
-//         );
-//     }
-
-//     for i in 0..params.len() {
-//         let name;
-
-//         match &params[i] {
-//             Expr::Param(n, _t) => {
-//                 match &**n {
-//                     Expr::Str(na) => name = Content::Str(na.to_string()),
-//                     _ => panic!("ERROR: Value is not a variable"),
-//                 };
-//             }
-//             _ => panic!("ERROR: Value is not a parameter"),
-//         }
-
-//         insert_var(name, eval_expr(args[i].clone()));
+// fn eval_rel_op(l: i32, ari_op: RelOp, r: i32) -> ExprRep {
+//     match ari_op {
+//         RelOp::Eq => ExprRep::Bool(l == r),
+//         RelOp::Neq => ExprRep::Bool(l != r),
+//         RelOp::Leq => ExprRep::Bool(l <= r),
+//         RelOp::Geq => ExprRep::Bool(l >= r),
+//         RelOp::Les => ExprRep::Bool(l < r),
+//         RelOp::Gre => ExprRep::Bool(l > r),
 //     }
 // }
 
-// fn eval_func(func_name: Content, params: Vec<Expr>, block: Vec<Expr>) -> Content {
-//     let v = vec![params, block];
-//     insert_function(func_name, v);
+#[cfg(test)]
+mod interpreter_tests {
+    use super::*;
 
-//     return Content::Null;
-// }
+    #[test]
+    fn test_int() {
+        assert_eq!(interpreter(vec![Expr::Int(1)]), ExprRep::Int(1));
+    }
 
-// fn eval_func_input(var: Content, func_name: &str, args: Vec<Expr>) -> Content {
-//     let func_content = read_from_func(func_name).1;
-//     let params = func_content[0].clone();
-//     let block = func_content[1].clone();
+    #[test]
+    fn test_eval_bool() {
+        assert_eq!(interpreter(vec![Expr::Bool(true)]), ExprRep::Bool(true));
+        assert_eq!(interpreter(vec![Expr::Bool(false)]), ExprRep::Bool(false));
+        assert_ne!(interpreter(vec![Expr::Bool(false)]), ExprRep::Bool(true));
+    }
 
-//     eval_params(params, args);
-//     let result = eval_block(block);
-//     let var_name = match var {
-//         Content::Str(var) => var,
-//         _ => panic!("Error: Invalid block input!"),
-//     };
+    #[test]
+    fn test_eval_var() {
+        insert_var(ExprRep::Var("a".to_string()), ExprRep::Int(1));
+        assert_eq!(
+            interpreter(vec![Expr::Var("a".to_string())]),
+            ExprRep::Int(1)
+        );
+        insert_var(ExprRep::Var("b".to_string()), ExprRep::Bool(true));
+        assert_eq!(
+            interpreter(vec![Expr::Var("b".to_string())]),
+            ExprRep::Bool(true)
+        );
+        insert_var(ExprRep::Var("c".to_string()), ExprRep::Var("d".to_string()));
+        assert_eq!(
+            interpreter(vec![Expr::Var("c".to_string())]),
+            ExprRep::Var("d".to_string())
+        );
+    }
 
-//     let value = match result {
-//         Content::Return(_, var) => var,
-//         _ => panic!("Error: Block result not found!"),
-//     };
+    #[test]
+    fn test_eval_ari_op() {
+        assert_eq!(eval_ari_op(1, AriOp::Add, 2), ExprRep::Int(3));
+        assert_eq!(eval_ari_op(3, AriOp::Sub, 2), ExprRep::Int(1));
+        assert_eq!(eval_ari_op(10, AriOp::Div, 2), ExprRep::Int(5));
+        assert_eq!(eval_ari_op(2, AriOp::Mul, 5), ExprRep::Int(10));
+    }
 
-//     return Content::Return(var_name.to_string(), value);
-// }
+    #[test]
+    fn test_eval_bin_expr() {
+        assert_eq!(
+            interpreter(vec![Expr::BinExpr(
+                Box::new(Expr::Int(1)),
+                Op::AriOp(AriOp::Add),
+                Box::new(Expr::Int(2)),
+            )]),
+            ExprRep::Int(3)
+        );
+    }
 
-// fn eval_return(return_param: &str, var: &str) -> Content {
-//     insert_var(
-//         Content::Str(return_param.to_string()),
-//         Content::Str(var.to_string()),
-//     );
-
-//     let value = read_from_var(var);
-//     return Content::Return(var.to_string(), Box::new(value));
-// }
-
-// fn eval_block(block: Vec<Expr>) -> Content {
-//     let mut res: Content = Content::Null;
-//     for expr in block.iter() {
-//         res = eval_expr(expr.clone());
-//         match res {
-//             Content::Return(_, _) => break,
-//             _ => continue,
-//         }
-//     }
-//     return res;
-// }
-
-// fn eval_i32(left: Content, operator: Content, right: Content) -> Content {
-//     match (left, operator, right) {
-//         (Content::Num(left), Content::ContentOp(ContentOp::Add), Content::Num(right)) => {
-//             Content::Num(left + right)
-//         }
-//         (Content::Num(left), Content::ContentOp(ContentOp::Sub), Content::Num(right)) => {
-//             Content::Num(left - right)
-//         }
-//         (Content::Num(left), Content::ContentOp(ContentOp::Div), Content::Num(right)) => {
-//             Content::Num(left / right)
-//         }
-//         (Content::Num(left), Content::ContentOp(ContentOp::Mult), Content::Num(right)) => {
-//             Content::Num(left * right)
-//         }
-//         _ => panic!("Invalid input!"),
-//     }
-// }
-
-// fn eval_bool(left: Content, operator: Content, right: Content) -> Content {
-//     match (left, operator, right) {
-//         (Content::Bool(left), Content::ContentOp(ContentOp::And), Content::Bool(right)) => {
-//             Content::Bool(left && right)
-//         }
-//         (Content::Bool(left), Content::ContentOp(ContentOp::Or), Content::Bool(right)) => {
-//             Content::Bool(left || right)
-//         }
-//         _ => panic!("Invalid input!"),
-//     }
-// }
-
-// fn eval_let(left: Content, operator: Content, right: Content) -> Content {
-//     match (left, operator, right) {
-//         (Content::Str(left), Content::ContentOp(ContentOp::Integer), Content::Num(right)) => {
-//             insert_var(Content::Str(left), Content::Num(right))
-//         }
-//         (Content::Str(left), Content::ContentOp(ContentOp::Integer), Content::Str(right)) => {
-//             insert_var(Content::Str(left), read_from_var(&right.to_string()))
-//         }
-//         (Content::Str(left), Content::ContentOp(ContentOp::Bool), right) => {
-//             insert_var(Content::Str(left), right)
-//         }
-//         (Content::Str(left), Content::ContentOp(ContentOp::Str), right) => {
-//             insert_var(Content::Str(left), right)
-//         }
-//         _ => panic!("Invalid input!"),
-//     }
-// }
-
-// #[cfg(test)]
-// mod interp_tests {
-//     use super::*;
-
-//     #[test]
-//     fn test_interp() {
-//         assert_eq!(eval_expr(Expr::Num(1)), Content::Num(1));
-//         assert_eq!(eval_expr(Expr::Bool(true)), Content::Bool(true));
-//     }
-
-//     #[test]
-//     fn test_interp_node() {
-//         assert_eq!(
-//             eval_expr(Expr::Let(
-//                 Box::new(Expr::Num(2)),
-//                 Box::new(Expr::ArithOp(ArithOp::Mult)),
-//                 Box::new(Expr::Num(3))
-//             )),
-//             Content::Num(6)
-//         );
-//         assert_eq!(
-//             eval_expr(Expr::Let(
-//                 Box::new(Expr::Bool(true)),
-//                 Box::new(Expr::LogicOp(LogicOp::And)),
-//                 Box::new(Expr::Bool(false))
-//             )),
-//             Content::Bool(false)
-//         );
-//     }
-// }
+    #[test]
+    fn test_eval_var_expr() {
+        interpreter(vec![
+            Expr::VarExpr(
+                Box::new(Expr::Var("e".to_string())),
+                Op::AssOp(AssOp::Equ),
+                Box::new(Expr::Int(2)),
+            ),
+            Expr::VarExpr(
+                Box::new(Expr::Var("e".to_string())),
+                Op::AssOp(AssOp::PluEqu),
+                Box::new(Expr::Int(2)),
+            ),
+        ]);
+        assert_eq!(read_from_var("e"), ExprRep::Int(4));
+    }
+}

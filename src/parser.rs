@@ -528,6 +528,17 @@ mod parse_tests {
     #[test]
     fn test_parse_var_expr() {
         assert_eq!(
+            parse_var_expr("a = 1"),
+            Ok((
+                "",
+                Expr::VarExpr(
+                    Box::new(Expr::Var("a".to_string())),
+                    Op::AssOp(AssOp::Equ),
+                    Box::new(Expr::Int(1)),
+                )
+            ))
+        );
+        assert_eq!(
             parse_var_expr("a && b"),
             Ok((
                 "",

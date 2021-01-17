@@ -1,10 +1,13 @@
 use structopt::StructOpt;
 
-use crate::interpreter::*;
-use crate::llvm::*;
+// use crate::interpreter::*;
 use crate::parser::*;
 use crate::program::*;
 use crate::type_checker::*;
+use crate::{interpreter::interpreter, llvm::*};
+
+use crate::ast::*;
+use crate::memory::*;
 
 #[derive(Debug, StructOpt)]
 #[structopt(
@@ -40,6 +43,9 @@ pub fn cli() {
     } else {
         let tree = parser(&program()).unwrap().1;
         println!("Tree = {:#?}", tree);
+
+        let eval = interpreter(tree);
+        println!("eval = {:#?}", eval);
 
         // if type_scope(tree.clone()) {
         //     let res = interpreter(tree);

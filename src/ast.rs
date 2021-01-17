@@ -22,7 +22,7 @@ pub enum Expr {
 pub enum Type {
     Int,
     Bool,
-    Str,
+    // Str,
     Void,
 }
 
