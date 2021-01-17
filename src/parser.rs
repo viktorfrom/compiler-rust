@@ -123,7 +123,6 @@ fn parse_bin_expr(input: &str) -> IResult<&str, Expr> {
         parse_int,
         parse_paren,
         parse_fn_call,
-        // parse_var,
     ))(input)
 }
 
@@ -190,21 +189,28 @@ fn parse_var_expr(input: &str) -> IResult<&str, Expr> {
 }
 
 fn parse_block(input: &str) -> IResult<&str, Vec<Expr>> {
-    delimited(
-        terminated(multispace0, tag("{")),
-        many0(alt((terminated(parse_scope, tag(";")), parse_return))),
-        terminated(multispace0, tag("}")),
-    )(input)
+    alt((
+        delimited(
+            terminated(multispace0, tag("{")),
+            many0(alt((terminated(parse_scope, tag(";")), parse_return))),
+            terminated(multispace0, tag("}")),
+        ),
+        delimited(
+            terminated(multispace0, tag("{")),
+            parse_block,
+            terminated(multispace0, tag("}")),
+        ),
+    ))(input)
 }
 
-fn parse_let(input: &str) -> IResult<&str, Expr> {
+pub fn parse_let(input: &str) -> IResult<&str, Expr> {
     let (substring, (var, var_type, expr)) = tuple((
         terminated(
             preceded(delimited(multispace0, tag("let"), multispace0), parse_var),
             tag(":"),
         ),
         parse_type,
-        parse_bin_expr,
+        parse_bin_expr
     ))(input)?;
 
     Ok((
@@ -423,6 +429,7 @@ mod parse_tests {
     #[test]
     fn test_parse_paren() {
         assert_eq!(parse_paren("(1)"), Ok(("", Expr::Int(1))));
+        assert_eq!(parse_paren("((1))"), Ok(("", Expr::Int(1))));
     }
 
     #[test]
@@ -584,6 +591,10 @@ mod parse_tests {
             Ok(("", vec![Expr::Return(Box::new(Expr::Int(1)))]))
         );
         assert_eq!(
+            parse_block("{{return 1}}"),
+            Ok(("", vec![Expr::Return(Box::new(Expr::Int(1)))]))
+        );
+        assert_eq!(
             parse_block("{let a: i32 = 1; return 1}"),
             Ok((
                 "",
@@ -726,7 +737,7 @@ mod parse_tests {
         );
     }
     #[test]
-    fn test_parser_fn() {
+    fn test_parse_fn() {
         assert_eq!(
             parse_fn("fn testfn(a: i32) -> () { return 1 }"),
             Ok((
