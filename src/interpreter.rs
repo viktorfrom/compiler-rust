@@ -25,10 +25,44 @@ fn eval_expr(expr: Expr) -> ExprRep {
 
         Expr::Let(var, var_type, expr) => eval_let(*var, var_type, *expr),
 
+        Expr::If(cond, block) => eval_if(*cond, block),
+        Expr::IfElse(cond, block1, block2) => eval_if_else(*cond, block1, block2),
+
+        // Expr::FnCall(fn_var, args) => eval_fn_call(fn_var, args),
         Expr::Return(expr) => eval_return(*expr),
         _ => panic!("Invalid expr!"),
     }
 }
+
+fn eval_if(cond: Expr, block: Vec<Expr>) -> ExprRep {
+    match eval_expr(cond) {
+        ExprRep::Bool(c) => {
+            if c {
+                return interpreter(block);
+            }
+            return ExprRep::Null;
+        }
+        _ => panic!("If stmt fail!"),
+    }
+}
+
+fn eval_if_else(cond: Expr, block1: Vec<Expr>, block2: Vec<Expr>) -> ExprRep {
+    match eval_expr(cond) {
+        ExprRep::Bool(c) => {
+            if c {
+                return interpreter(block1);
+            } else {
+                return interpreter(block2);
+            }
+        }
+        _ => panic!("IfElse stmt fail!"),
+    }
+}
+
+// fn eval_fn_call(fn_var: Box<Expr>, args: Vec<Expr>) -> ExprRep {
+//     println!("var = {:#?}, args = {:#?}", fn_var, args);
+//     return ExprRep::Null
+// }
 
 fn eval_let(var: Expr, _var_type: Type, expr: Expr) -> ExprRep {
     match (var, eval_expr(expr)) {
@@ -103,6 +137,17 @@ fn eval_var_expr(var: Expr, op: Op, expr: Expr) -> ExprRep {
                 insert_var(ExprRep::Var(v), ExprRep::Bool(old_val || new_val))
             }
             _ => panic!("Var Or update fail!"),
+        },
+
+        Op::RelOp(RelOp::Eq) => match (eval_expr(var), eval_expr(expr)) {
+            (ExprRep::Bool(v1), ExprRep::Bool(v2)) => {
+                if v1 == v2 {
+                    return ExprRep::Bool(true);
+                }
+                ExprRep::Bool(false)
+            }
+
+            _ => ExprRep::Null,
         },
 
         _ => panic!("Invalid var expr!"),
@@ -329,6 +374,67 @@ mod interpreter_tests {
                 ))),
             ]),
             ExprRep::Int(3)
+        );
+    }
+
+    #[test]
+    fn test_eval_if() {
+        assert_eq!(
+            interpreter(vec![Expr::If(
+                Box::new(Expr::Bool(true)),
+                vec![Expr::Return(Box::new(Expr::Int(1)))]
+            )]),
+            ExprRep::Int(1)
+        );
+
+        assert_eq!(
+            interpreter(vec![
+                Expr::VarExpr(
+                    Box::new(Expr::Var("l".to_string())),
+                    Op::AssOp(AssOp::Eq),
+                    Box::new(Expr::Bool(true)),
+                ),
+                Expr::VarExpr(
+                    Box::new(Expr::Var("m".to_string())),
+                    Op::AssOp(AssOp::Eq),
+                    Box::new(Expr::Bool(true)),
+                ),
+                Expr::If(
+                    Box::new(Expr::VarExpr(
+                        Box::new(Expr::Var("l".to_string())),
+                        Op::RelOp(RelOp::Eq),
+                        Box::new(Expr::Var("m".to_string()))
+                    )),
+                    vec![Expr::Return(Box::new(Expr::Int(1)))]
+                )
+            ]),
+            ExprRep::Int(1)
+        );
+    }
+    #[test]
+    fn test_eval_if_else() {
+        assert_eq!(
+            interpreter(vec![Expr::IfElse(
+                Box::new(Expr::Bool(false)),
+                vec![Expr::Return(Box::new(Expr::Int(1)))],
+                vec![Expr::Return(Box::new(Expr::Int(2)))],
+            )]),
+            ExprRep::Int(2)
+        );
+        assert_eq!(
+            interpreter(vec![
+                Expr::VarExpr(
+                    Box::new(Expr::Var("n".to_string())),
+                    Op::AssOp(AssOp::Eq),
+                    Box::new(Expr::Bool(true)),
+                ),
+                Expr::IfElse(
+                    Box::new(Expr::Var("n".to_string())),
+                    vec![Expr::Return(Box::new(Expr::Int(2)))],
+                    vec![Expr::Return(Box::new(Expr::Int(1)))],
+                )
+            ]),
+            ExprRep::Int(2)
         );
     }
 }
