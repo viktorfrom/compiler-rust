@@ -41,7 +41,7 @@ pub fn cli() {
         //     panic!("ERROR: Typechecker failed!");
         // }
     } else {
-        let tree = parser("let a: bool =1 +2+ 3+ 4 return a ").unwrap().1;
+        let tree = parser("let a:i32 = 2 a += 1 return a").unwrap().1;
         println!("Tree = {:#?}", tree);
 
         let res = interpreter(tree);
