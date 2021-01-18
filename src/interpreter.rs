@@ -94,16 +94,25 @@ fn eval_return(expr: Expr) -> ExprRep {
 }
 
 fn eval_bin_expr(l: Expr, op: Op, r: Expr) -> ExprRep {
-    // println!("l = {:#?}", l);
-    // println!("r = {:#?}", r);
     match (l, r.clone()) {
         (Expr::Int(left), Expr::Int(right)) => eval_ari_op(left, op, right),
-        (Expr::Bool(left), Expr::Bool(right)) => eval_log_op(left, op, right),
+        (Expr::Int(v), Expr::BinExpr(_, _, _)) => match eval_expr(r) {
+            ExprRep::Int(r) => eval_ari_op(v, op, r),
+            _ => ExprRep::Null,
+        },
         (Expr::Var(v), Expr::Int(right)) => match read_from_var(&v) {
             ExprRep::Int(val) => ExprRep::Int(val + right),
             _ => ExprRep::Int(right),
         },
-        (Expr::Var(_), Expr::Bool(right)) => ExprRep::Bool(right),
+        (Expr::Bool(left), Expr::Bool(right)) => eval_log_op(left, op, right),
+        (Expr::Bool(v), Expr::BinExpr(_, _, _)) => match eval_expr(r) {
+            ExprRep::Bool(r) => eval_log_op(v, op, r),
+            _ => ExprRep::Null,
+        },
+        (Expr::Var(v), Expr::Bool(right)) => match read_from_var(&v) {
+            ExprRep::Bool(val) => eval_log_op(val, op, right),
+            _ => ExprRep::Bool(right),
+        },
         (Expr::Var(_), Expr::BinExpr(_, _, _)) => eval_expr(r),
 
         _ => panic!("Invalid bin expr!"),
@@ -269,7 +278,10 @@ mod interpreter_tests {
             interpreter(vec![Expr::Var("a2".to_string())]),
             ExprRep::Bool(true)
         );
-        insert_var(ExprRep::Var("a3".to_string()), ExprRep::Var("a4".to_string()));
+        insert_var(
+            ExprRep::Var("a3".to_string()),
+            ExprRep::Var("a4".to_string()),
+        );
         assert_eq!(
             interpreter(vec![Expr::Var("a3".to_string())]),
             ExprRep::Var("a4".to_string())

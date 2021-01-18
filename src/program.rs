@@ -2,7 +2,7 @@ pub fn program() -> String {
     let program = "
 
         fn testfn1(a: bool) -> i32 {
-            let c: i32 = (((2)));
+            let c: i32 = (((1 + 2 + 3)));
             if a {
                 let b: i32 = 1;
                 return b
