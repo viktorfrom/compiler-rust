@@ -77,7 +77,7 @@ fn eval_return(expr: Expr) -> ExprRep {
 
 fn eval_bin_expr(l: Expr, op: Op, r: Expr) -> ExprRep {
     match (l, r) {
-        (Expr::Int(left), Expr::Int(right)) => eval_op(left, op, right),
+        (Expr::Int(left), Expr::Int(right)) => eval_ari_op(left, op, right),
         (Expr::Var(v), Expr::Int(right)) => match read_from_var(&v) {
             ExprRep::Int(c) => ExprRep::Int(c + right),
             _ => ExprRep::Int(right),
@@ -89,127 +89,109 @@ fn eval_bin_expr(l: Expr, op: Op, r: Expr) -> ExprRep {
 /// Inserts the variable into memory or updates existing value
 fn eval_var_expr(var: Expr, op: Op, expr: Expr) -> ExprRep {
     match op {
-        Op::AriOp(AriOp::Add) => match (var, expr) {
+        Op::AriOp(op) => var_ari_op(var, op, expr),
+        Op::AssOp(op) => var_ass_op(var, op, expr),
+        Op::LogOp(op) => var_log_op(var, op, expr),
+        Op::RelOp(op) => var_rel_op(var, op, expr),
+    }
+}
+
+fn eval_ari_op(l: i32, op: Op, r: i32) -> ExprRep {
+    match op {
+        Op::AriOp(AriOp::Add) => ExprRep::Int(l + r),
+        Op::AriOp(AriOp::Sub) => ExprRep::Int(l - r),
+        Op::AriOp(AriOp::Div) => ExprRep::Int(l / r),
+        Op::AriOp(AriOp::Mul) => ExprRep::Int(l * r),
+        _ => panic!("Invalid Ari op!"),
+    }
+}
+
+fn var_ari_op(var: Expr, op: AriOp, expr: Expr) -> ExprRep {
+    match op {
+        AriOp::Add => match (var, expr) {
             (Expr::Var(v), Expr::Var(expr)) => match (read_from_var(&v), read_from_var(&expr)) {
                 (ExprRep::Int(v1), ExprRep::Int(v2)) => ExprRep::Int(v1 + v2),
                 _ => ExprRep::Null,
             },
-            _ => panic!("Var add fail!"),
+            _ => panic!("Var Add fail!"),
         },
+        // Op::AriOp(AriOp::Sub) => ExprRep::Int(l - r),
+        // Op::AriOp(AriOp::Div) => ExprRep::Int(l / r),
+        // Op::AriOp(AriOp::Mul) => ExprRep::Int(l * r),
+        _ => panic!("Invalid Var Ari op!"),
+    }
+}
 
-        Op::AssOp(AssOp::Eq) => match (var.clone(), eval_expr(expr)) {
+fn var_ass_op(var: Expr, ass_op: AssOp, expr: Expr) -> ExprRep {
+    match ass_op {
+        AssOp::Eq => match (var, eval_expr(expr)) {
             (Expr::Var(v), ExprRep::Int(val)) => insert_var(ExprRep::Var(v), ExprRep::Int(val)),
             (Expr::Var(v), ExprRep::Bool(val)) => insert_var(ExprRep::Var(v), ExprRep::Bool(val)),
             _ => panic!("Var insert fail!"),
         },
-        Op::AssOp(AssOp::AddEq) => match (var.clone(), eval_expr(var), eval_expr(expr)) {
+        AssOp::AddEq => match (var.clone(), eval_expr(var), eval_expr(expr)) {
             (Expr::Var(v), ExprRep::Int(old_val), ExprRep::Int(new_val)) => {
                 insert_var(ExprRep::Var(v), ExprRep::Int(old_val + new_val))
             }
             _ => panic!("Var Add update fail!"),
         },
-        Op::AssOp(AssOp::SubEq) => match (var.clone(), eval_expr(var), eval_expr(expr)) {
+        AssOp::SubEq => match (var.clone(), eval_expr(var), eval_expr(expr)) {
             (Expr::Var(v), ExprRep::Int(old_val), ExprRep::Int(new_val)) => {
                 insert_var(ExprRep::Var(v), ExprRep::Int(old_val - new_val))
             }
             _ => panic!("Var Sub update fail!"),
         },
-        Op::AssOp(AssOp::DivEq) => match (var.clone(), eval_expr(var), eval_expr(expr)) {
+        AssOp::DivEq => match (var.clone(), eval_expr(var), eval_expr(expr)) {
             (Expr::Var(v), ExprRep::Int(old_val), ExprRep::Int(new_val)) => {
-                insert_var(ExprRep::Var(v), ExprRep::Int(old_val / new_val))
+                insert_var(ExprRep::Var(v), ExprRep::Int(old_val - new_val))
             }
-            _ => panic!("Var Div update fail!"),
+            _ => panic!("Var Sub update fail!"),
         },
-        Op::AssOp(AssOp::MulEq) => match (var.clone(), eval_expr(var), eval_expr(expr)) {
+        AssOp::MulEq => match (var.clone(), eval_expr(var), eval_expr(expr)) {
             (Expr::Var(v), ExprRep::Int(old_val), ExprRep::Int(new_val)) => {
-                insert_var(ExprRep::Var(v), ExprRep::Int(old_val * new_val))
+                insert_var(ExprRep::Var(v), ExprRep::Int(old_val - new_val))
             }
-            _ => panic!("Var Mul update fail!"),
+            _ => panic!("Var Sub update fail!"),
         },
-        Op::LogOp(LogOp::And) => match (var.clone(), eval_expr(var), eval_expr(expr)) {
+    }
+}
+
+fn var_log_op(var: Expr, log_op: LogOp, expr: Expr) -> ExprRep {
+    match log_op {
+        LogOp::And => match (var.clone(), eval_expr(var), eval_expr(expr)) {
             (Expr::Var(v), ExprRep::Bool(old_val), ExprRep::Bool(new_val)) => {
                 insert_var(ExprRep::Var(v), ExprRep::Bool(old_val && new_val))
             }
             _ => panic!("Var And update fail!"),
         },
-        Op::LogOp(LogOp::Or) => match (var.clone(), eval_expr(var), eval_expr(expr)) {
+        LogOp::Or => match (var.clone(), eval_expr(var), eval_expr(expr)) {
             (Expr::Var(v), ExprRep::Bool(old_val), ExprRep::Bool(new_val)) => {
                 insert_var(ExprRep::Var(v), ExprRep::Bool(old_val || new_val))
             }
             _ => panic!("Var Or update fail!"),
         },
+    }
+}
 
-        Op::RelOp(RelOp::Eq) => match (eval_expr(var), eval_expr(expr)) {
+fn var_rel_op(l: Expr, rel_op: RelOp, r: Expr) -> ExprRep {
+    match rel_op {
+        RelOp::Eq => match (eval_expr(l), eval_expr(r)) {
             (ExprRep::Bool(v1), ExprRep::Bool(v2)) => {
                 if v1 == v2 {
                     return ExprRep::Bool(true);
                 }
                 ExprRep::Bool(false)
             }
-
             _ => ExprRep::Null,
         },
-
-        _ => panic!("Invalid var expr!"),
+        // RelOp::Neq => ExprRep::Bool(l != r),
+        // RelOp::Leq => ExprRep::Bool(l <= r),
+        // RelOp::Geq => ExprRep::Bool(l >= r),
+        // RelOp::Les => ExprRep::Bool(l < r),
+        // RelOp::Gre => ExprRep::Bool(l > r),
+        _ => panic!("Invalid Var Rel op!"),
     }
 }
-
-fn eval_op(l: i32, op: Op, r: i32) -> ExprRep {
-    match op {
-        Op::AriOp(op) => eval_ari_op(l, op, r),
-        // Op::AssOp(op) => eval_ass_op(l, op, r),
-        // Op::LogOp(op) => eval_log_op(l, op, r),
-        // Op::RelOp(op) => eval_rel_op(l, op, r),
-        _ => panic!("Invalid op expr!"),
-    }
-}
-
-fn eval_ari_op(l: i32, ari_op: AriOp, r: i32) -> ExprRep {
-    match ari_op {
-        AriOp::Add => ExprRep::Int(l + r),
-        AriOp::Sub => ExprRep::Int(l - r),
-        AriOp::Div => ExprRep::Int(l / r),
-        AriOp::Mul => ExprRep::Int(l * r),
-    }
-}
-
-// fn eval_ari_op(l: i32, op: Op, r: i32) -> ExprRep {
-//     match op {
-//         Op::AriOp(AriOp::Add) => ExprRep::Int(l + r),
-//         Op::AriOp(AriOp::Sub) => ExprRep::Int(l - r),
-//         Op::AriOp(AriOp::Div) => ExprRep::Int(l / r),
-//         Op::AriOp(AriOp::Mul) => ExprRep::Int(l * r),
-//         _ => panic!("Invalid ari op!"),
-//     }
-// }
-
-// fn eval_ass_op(l: i32, ass_op: AssOp, r: i32) -> ExprRep {
-//     match ass_op {
-//         AssOp::Eq => ExprRep::Int(l + r),
-//         AssOp::AddEq => ExprRep::Int(l + r),
-//         AssOp::SubEq => ExprRep::Int(l + r),
-//         AssOp::DivEq => ExprRep::Int(l + r),
-//         AssOp::MulEq => ExprRep::Int(l + r),
-//     }
-// }
-
-fn eval_log_op(l: bool, log_op: LogOp, r: bool) -> ExprRep {
-    match log_op {
-        LogOp::And => ExprRep::Bool(l && r),
-        LogOp::Or => ExprRep::Bool(l || r),
-    }
-}
-
-// fn eval_rel_op(l: i32, ari_op: RelOp, r: i32) -> ExprRep {
-//     match ari_op {
-//         RelOp::Eq => ExprRep::Bool(l == r),
-//         RelOp::Neq => ExprRep::Bool(l != r),
-//         RelOp::Leq => ExprRep::Bool(l <= r),
-//         RelOp::Geq => ExprRep::Bool(l >= r),
-//         RelOp::Les => ExprRep::Bool(l < r),
-//         RelOp::Gre => ExprRep::Bool(l > r),
-//     }
-// }
 
 #[cfg(test)]
 mod interpreter_tests {
@@ -248,10 +230,10 @@ mod interpreter_tests {
 
     #[test]
     fn test_eval_ari_op() {
-        assert_eq!(eval_ari_op(1, AriOp::Add, 2), ExprRep::Int(3));
-        assert_eq!(eval_ari_op(3, AriOp::Sub, 2), ExprRep::Int(1));
-        assert_eq!(eval_ari_op(10, AriOp::Div, 2), ExprRep::Int(5));
-        assert_eq!(eval_ari_op(2, AriOp::Mul, 5), ExprRep::Int(10));
+        assert_eq!(eval_ari_op(1, Op::AriOp(AriOp::Add), 2), ExprRep::Int(3));
+        assert_eq!(eval_ari_op(3, Op::AriOp(AriOp::Sub), 2), ExprRep::Int(1));
+        assert_eq!(eval_ari_op(10, Op::AriOp(AriOp::Div), 2), ExprRep::Int(5));
+        assert_eq!(eval_ari_op(2, Op::AriOp(AriOp::Mul), 5), ExprRep::Int(10));
     }
 
     #[test]
