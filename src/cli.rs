@@ -41,53 +41,21 @@ pub fn cli() {
         //     panic!("ERROR: Typechecker failed!");
         // }
     } else {
-        // let tree = parser(&program()).unwrap().1;
-        // println!("Tree = {:#?}", tree);
+        let tree = parser("let a: bool = true && true && false").unwrap().1;
+        println!("Tree = {:#?}", tree);
 
-        // let eval = interpreter(vec![
+        let res = interpreter(tree);
+        // let res = interpreter(vec![Expr::Let(
+        //     Box::new(Expr::Var("a".to_string())),
+        //     Type::Bool,
+        //     Box::new(Expr::BinExpr(
+        //         Box::new(Expr::Var("".to_string())),
+        //         Op::AssOp(AssOp::Eq),
+        //         Box::new(Expr::Bool(true)),
+        //     )),
+        // )]);
 
-        //         Expr::VarExpr(
-        //             Box::new(Expr::Var("o".to_string())),
-        //             Op::AssOp(AssOp::Eq),
-        //             Box::new(Expr::Bool(true)),
-        //         ),
-        //         Expr::VarExpr(
-        //             Box::new(Expr::Var("p".to_string())),
-        //             Op::AssOp(AssOp::Eq),
-        //             Box::new(Expr::Bool(true)),
-        //         ),
-        //         Expr::While(
-        //             Box::new(Expr::VarExpr(
-        //                 Box::new(Expr::Var("o".to_string())),
-        //                 Op::LogOp(LogOp::And),
-        //                 Box::new(Expr::Var("p".to_string()))
-        //             )),
-        //             vec![Expr::Return(Box::new(Expr::Int(2)))]
-        //         )
-
-        // ]);
-        let eval = interpreter(vec![
-            Expr::VarExpr(
-                Box::new(Expr::Var("o".to_string())),
-                Op::AssOp(AssOp::Eq),
-                Box::new(Expr::Bool(true)),
-            ),
-            Expr::VarExpr(
-                Box::new(Expr::Var("p".to_string())),
-                Op::AssOp(AssOp::Eq),
-                Box::new(Expr::Bool(true)),
-            ),
-            Expr::While(
-                Box::new(Expr::VarExpr(
-                    Box::new(Expr::Var("o".to_string())),
-                    Op::RelOp(RelOp::Eq),
-                    Box::new(Expr::Var("p".to_string())),
-                )),
-                vec![Expr::Return(Box::new(Expr::Int(2)))],
-            ),
-        ]);
-
-        println!("eval = {:#?}", eval);
+        println!("res = {:#?}", res);
 
         // if type_scope(tree.clone()) {
         //     let res = interpreter(tree);
