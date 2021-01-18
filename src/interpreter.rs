@@ -1,7 +1,7 @@
 use core::panic;
 
+use crate::ast::*;
 use crate::memory::*;
-use crate::{ast::*, memory};
 
 pub fn interpreter(tree: Vec<Expr>) -> ExprRep {
     let mut res = ExprRep::Null;
@@ -27,6 +27,7 @@ fn eval_expr(expr: Expr) -> ExprRep {
 
         Expr::If(cond, block) => eval_if(*cond, block),
         Expr::IfElse(cond, block1, block2) => eval_if_else(*cond, block1, block2),
+        Expr::While(cond, block) => eval_while(*cond, block),
 
         // Expr::FnCall(fn_var, args) => eval_fn_call(fn_var, args),
         Expr::Return(expr) => eval_return(*expr),
@@ -35,6 +36,7 @@ fn eval_expr(expr: Expr) -> ExprRep {
 }
 
 fn eval_if(cond: Expr, block: Vec<Expr>) -> ExprRep {
+    println!("cond = {:#?}", eval_expr(cond.clone()));
     match eval_expr(cond) {
         ExprRep::Bool(c) => {
             if c {
@@ -56,6 +58,19 @@ fn eval_if_else(cond: Expr, block1: Vec<Expr>, block2: Vec<Expr>) -> ExprRep {
             }
         }
         _ => panic!("IfElse stmt fail!"),
+    }
+}
+
+fn eval_while(cond: Expr, block: Vec<Expr>) -> ExprRep {
+    println!("cond = {:#?}", eval_expr(cond.clone()));
+    match eval_expr(cond) {
+        ExprRep::Bool(c) => {
+            if c {
+                return interpreter(block);
+            }
+            return ExprRep::Null;
+        }
+        _ => panic!("While stmt fail!"),
     }
 }
 
@@ -198,7 +213,7 @@ mod interpreter_tests {
     use super::*;
 
     #[test]
-    fn test_int() {
+    fn test_eval_int() {
         assert_eq!(interpreter(vec![Expr::Int(1)]), ExprRep::Int(1));
     }
 
@@ -264,7 +279,7 @@ mod interpreter_tests {
         ]);
         assert_eq!(read_from_var("e"), ExprRep::Int(4));
 
-        let eval = interpreter(vec![
+        interpreter(vec![
             Expr::VarExpr(
                 Box::new(Expr::Var("f".to_string())),
                 Op::AssOp(AssOp::Eq),
@@ -417,6 +432,40 @@ mod interpreter_tests {
                 )
             ]),
             ExprRep::Int(2)
+        );
+    }
+
+    #[test]
+    fn test_eval_while() {
+        assert_eq!(
+            interpreter(vec![Expr::While(
+                Box::new(Expr::Bool(true)),
+                vec![Expr::Return(Box::new(Expr::Bool(false)))]
+            )]),
+            ExprRep::Bool(false),
+        );
+        assert_eq!(
+            interpreter(vec![
+                Expr::VarExpr(
+                    Box::new(Expr::Var("o".to_string())),
+                    Op::AssOp(AssOp::Eq),
+                    Box::new(Expr::Bool(true)),
+                ),
+                Expr::VarExpr(
+                    Box::new(Expr::Var("p".to_string())),
+                    Op::AssOp(AssOp::Eq),
+                    Box::new(Expr::Bool(true)),
+                ),
+                Expr::While(
+                    Box::new(Expr::VarExpr(
+                        Box::new(Expr::Var("o".to_string())),
+                        Op::RelOp(RelOp::Eq),
+                        Box::new(Expr::Var("p".to_string()))
+                    )),
+                    vec![Expr::Return(Box::new(Expr::Int(2)))]
+                )
+            ]),
+            ExprRep::Int(2),
         );
     }
 }

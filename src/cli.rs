@@ -44,11 +44,48 @@ pub fn cli() {
         // let tree = parser(&program()).unwrap().1;
         // println!("Tree = {:#?}", tree);
 
-        let eval = interpreter(vec![Expr::IfElse(
-            Box::new(Expr::Bool(false)),
-            vec![Expr::Return(Box::new(Expr::Int(1)))],
-            vec![Expr::Return(Box::new(Expr::Int(2)))],
-        )]);
+        // let eval = interpreter(vec![
+
+        //         Expr::VarExpr(
+        //             Box::new(Expr::Var("o".to_string())),
+        //             Op::AssOp(AssOp::Eq),
+        //             Box::new(Expr::Bool(true)),
+        //         ),
+        //         Expr::VarExpr(
+        //             Box::new(Expr::Var("p".to_string())),
+        //             Op::AssOp(AssOp::Eq),
+        //             Box::new(Expr::Bool(true)),
+        //         ),
+        //         Expr::While(
+        //             Box::new(Expr::VarExpr(
+        //                 Box::new(Expr::Var("o".to_string())),
+        //                 Op::LogOp(LogOp::And),
+        //                 Box::new(Expr::Var("p".to_string()))
+        //             )),
+        //             vec![Expr::Return(Box::new(Expr::Int(2)))]
+        //         )
+
+        // ]);
+        let eval = interpreter(vec![
+            Expr::VarExpr(
+                Box::new(Expr::Var("o".to_string())),
+                Op::AssOp(AssOp::Eq),
+                Box::new(Expr::Bool(true)),
+            ),
+            Expr::VarExpr(
+                Box::new(Expr::Var("p".to_string())),
+                Op::AssOp(AssOp::Eq),
+                Box::new(Expr::Bool(true)),
+            ),
+            Expr::While(
+                Box::new(Expr::VarExpr(
+                    Box::new(Expr::Var("o".to_string())),
+                    Op::RelOp(RelOp::Eq),
+                    Box::new(Expr::Var("p".to_string())),
+                )),
+                vec![Expr::Return(Box::new(Expr::Int(2)))],
+            ),
+        ]);
 
         println!("eval = {:#?}", eval);
 
