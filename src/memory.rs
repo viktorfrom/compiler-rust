@@ -71,7 +71,8 @@ pub fn read_from_var(var: &str) -> ExprRep {
             _ => panic!("Could not match var '{:#?}' in HashMap", var),
         },
         None => {
-            panic!("ERROR: Var '{:?}' not found in scope", var);
+            ExprRep::Null
+            // panic!("ERROR: Var '{:?}' not found in scope", var);
         }
     }
 }

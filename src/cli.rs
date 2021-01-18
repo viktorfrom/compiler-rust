@@ -41,22 +41,10 @@ pub fn cli() {
         //     panic!("ERROR: Typechecker failed!");
         // }
     } else {
-        // let tree = parser(&program()).unwrap().1;
+        let tree = parser(&program()).unwrap().1;
         // println!("Tree = {:#?}", tree);
 
-        // let eval = interpreter(tree);
-        let eval = interpreter(vec![
-            Expr::VarExpr(
-                Box::new(Expr::Var("a".to_string())),
-                Op::AssOp(AssOp::Eq),
-                Box::new(Expr::Int(2)),
-            ),
-            Expr::Return(Box::new(Expr::BinExpr(
-                Box::new(Expr::Var("a".to_string())),
-                Op::AriOp(AriOp::Add),
-                Box::new(Expr::Int(1)),
-            ))),
-        ]);
+        let eval = interpreter(tree);
 
         println!("eval = {:#?}", eval);
 
