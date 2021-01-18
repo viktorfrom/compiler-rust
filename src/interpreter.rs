@@ -1,3 +1,5 @@
+use core::panic;
+
 use crate::memory::*;
 use crate::{ast::*, memory};
 
@@ -40,10 +42,16 @@ fn eval_return(expr: Expr) -> ExprRep {
 }
 
 fn eval_bin_expr(l: Expr, op: Op, r: Expr) -> ExprRep {
-    println!("l = {:#?}, r = {:#?}", l, r);
     match (l, r) {
         (Expr::Int(left), Expr::Int(right)) => eval_op(left, op, right),
-        (Expr::Var(_), Expr::Int(right)) => ExprRep::Int(right),
+        (Expr::Var(v), Expr::Int(right)) => {
+            match read_from_var(&v) {
+                ExprRep::Int(c) => {
+                    ExprRep::Int(c + right)
+                },
+                _ => ExprRep::Int(right),
+            }
+        }
         _ => panic!("Invalid bin expr!"),
     }
 }
@@ -51,31 +59,39 @@ fn eval_bin_expr(l: Expr, op: Op, r: Expr) -> ExprRep {
 /// Inserts the variable into memory or updates existing value
 fn eval_var_expr(var: Expr, op: Op, expr: Expr) -> ExprRep {
     match op {
+        Op::AriOp(AriOp::Add) => match (var, expr) {
+            (Expr::Var(v), Expr::Var(expr)) => match (read_from_var(&v), read_from_var(&expr)) {
+                (ExprRep::Int(v1), ExprRep::Int(v2)) => ExprRep::Int(v1 + v2),
+                _ => ExprRep::Null,
+            },
+            _ => panic!("Variable addition failed!"),
+        },
+
         Op::AssOp(AssOp::Eq) => match (var.clone(), eval_expr(expr)) {
-            (Expr::Var(n), ExprRep::Int(val)) => insert_var(ExprRep::Var(n), ExprRep::Int(val)),
+            (Expr::Var(v), ExprRep::Int(val)) => insert_var(ExprRep::Var(v), ExprRep::Int(val)),
             _ => panic!(),
         },
         Op::AssOp(AssOp::AddEq) => match (var.clone(), eval_expr(var), eval_expr(expr)) {
-            (Expr::Var(n), ExprRep::Int(old_val), ExprRep::Int(new_val)) => {
-                insert_var(ExprRep::Var(n), ExprRep::Int(old_val + new_val))
+            (Expr::Var(v), ExprRep::Int(old_val), ExprRep::Int(new_val)) => {
+                insert_var(ExprRep::Var(v), ExprRep::Int(old_val + new_val))
             }
             _ => panic!(),
         },
         Op::AssOp(AssOp::SubEq) => match (var.clone(), eval_expr(var), eval_expr(expr)) {
-            (Expr::Var(n), ExprRep::Int(old_val), ExprRep::Int(new_val)) => {
-                insert_var(ExprRep::Var(n), ExprRep::Int(old_val - new_val))
+            (Expr::Var(v), ExprRep::Int(old_val), ExprRep::Int(new_val)) => {
+                insert_var(ExprRep::Var(v), ExprRep::Int(old_val - new_val))
             }
             _ => panic!(),
         },
         Op::AssOp(AssOp::DivEq) => match (var.clone(), eval_expr(var), eval_expr(expr)) {
-            (Expr::Var(n), ExprRep::Int(old_val), ExprRep::Int(new_val)) => {
-                insert_var(ExprRep::Var(n), ExprRep::Int(old_val / new_val))
+            (Expr::Var(v), ExprRep::Int(old_val), ExprRep::Int(new_val)) => {
+                insert_var(ExprRep::Var(v), ExprRep::Int(old_val / new_val))
             }
             _ => panic!(),
         },
         Op::AssOp(AssOp::MulEq) => match (var.clone(), eval_expr(var), eval_expr(expr)) {
-            (Expr::Var(n), ExprRep::Int(old_val), ExprRep::Int(new_val)) => {
-                insert_var(ExprRep::Var(n), ExprRep::Int(old_val * new_val))
+            (Expr::Var(v), ExprRep::Int(old_val), ExprRep::Int(new_val)) => {
+                insert_var(ExprRep::Var(v), ExprRep::Int(old_val * new_val))
             }
             _ => panic!(),
         },
@@ -122,12 +138,12 @@ fn eval_ari_op(l: i32, ari_op: AriOp, r: i32) -> ExprRep {
 //     }
 // }
 
-// fn eval_log_op(l: bool, ari_op: LogOp, r: bool) -> ExprRep {
-//     match ari_op {
-//         LogOp::And => ExprRep::Bool(l && r),
-//         LogOp::Or => ExprRep::Bool(l || r),
-//     }
-// }
+fn eval_log_op(l: bool, log_op: LogOp, r: bool) -> ExprRep {
+    match log_op {
+        LogOp::And => ExprRep::Bool(l && r),
+        LogOp::Or => ExprRep::Bool(l || r),
+    }
+}
 
 // fn eval_rel_op(l: i32, ari_op: RelOp, r: i32) -> ExprRep {
 //     match ari_op {
@@ -254,6 +270,26 @@ mod interpreter_tests {
                 Box::new(Expr::Int(2)),
             )))]),
             ExprRep::Int(3)
+        );
+        assert_eq!(
+            interpreter(vec![
+                Expr::VarExpr(
+                    Box::new(Expr::Var("h".to_string())),
+                    Op::AssOp(AssOp::Eq),
+                    Box::new(Expr::Int(2)),
+                ),
+                Expr::VarExpr(
+                    Box::new(Expr::Var("i".to_string())),
+                    Op::AssOp(AssOp::Eq),
+                    Box::new(Expr::Int(2)),
+                ),
+                Expr::Return(Box::new(Expr::VarExpr(
+                    Box::new(Expr::Var("h".to_string())),
+                    Op::AriOp(AriOp::Add),
+                    Box::new(Expr::Var("i".to_string())),
+                )))
+            ]),
+            ExprRep::Int(4)
         );
     }
 }

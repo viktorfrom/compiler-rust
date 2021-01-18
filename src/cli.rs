@@ -45,11 +45,18 @@ pub fn cli() {
         // println!("Tree = {:#?}", tree);
 
         // let eval = interpreter(tree);
-        let eval = interpreter(vec![Expr::Return(Box::new(Expr::BinExpr(
-            Box::new(Expr::Var("1".to_string())),
-            Op::AriOp(AriOp::Add),
-            Box::new(Expr::Var("3".to_string())),
-        )))]);
+        let eval = interpreter(vec![
+            Expr::VarExpr(
+                Box::new(Expr::Var("a".to_string())),
+                Op::AssOp(AssOp::Eq),
+                Box::new(Expr::Int(2)),
+            ),
+            Expr::Return(Box::new(Expr::BinExpr(
+                Box::new(Expr::Var("a".to_string())),
+                Op::AriOp(AriOp::Add),
+                Box::new(Expr::Int(1)),
+            ))),
+        ]);
 
         println!("eval = {:#?}", eval);
 
