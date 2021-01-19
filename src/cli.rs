@@ -1,10 +1,10 @@
 use structopt::StructOpt;
 
 // use crate::interpreter::*;
-use crate::parser::*;
 use crate::program::*;
 use crate::type_checker::*;
 use crate::{interpreter::interpreter, llvm::*};
+use crate::{parser::*, program};
 
 use crate::ast::*;
 use crate::memory::*;
@@ -16,6 +16,7 @@ use crate::memory::*;
 execute examples:
 cargo run -- 
 cargo run -- -l
+cargo run -- -l -t
 cargo run -- --help
 "
 )]
@@ -25,29 +26,28 @@ struct Opt {
 
     #[structopt(short, long)]
     llvm: bool,
+
+    #[structopt(short, long)]
+    tree: bool,
 }
 
 pub fn cli() {
     let opt = Opt::from_args();
 
-    if opt.llvm {
-        // let tree = parser(&program()).unwrap().1;
-        // println!("Tree = {:#?}", tree);
+    let tree = parser("fn testfn(a: i32) -> i32 { return a } return testfn(5)")
+        .unwrap()
+        .1;
 
-        // if type_checker(tree.clone()) {
-        //     let res = compiler(tree);
-        //     println!("eval = {:#?}", res);
-        // } else {
-        //     panic!("ERROR: Typechecker failed!");
-        // }
+    if opt.tree {
+        println!("Tree = {:#?}", tree);
+    }
+
+    if opt.llvm {
+        println!("llvm");
     } else {
-        let tree = parser("fn testfn(a: i32) -> i32 {return a} return testfn(5)")
-            .unwrap()
-            .1;
-        // println!("Tree = {:#?}", tree);
+        println!("interpreter");
         let res = interpreter(tree);
         println!("res = {:#?}", res);
-
         // if type_scope(tree.clone()) {
         //     let res = interpreter(tree);
         //     println!("eval = {:#?}", res);

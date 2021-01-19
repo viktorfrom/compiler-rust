@@ -60,18 +60,28 @@ fn eval_fn_call(fn_var: Expr, args: Vec<Expr>) -> ExprRep {
                     for x in params.clone() {
                         match &x {
                             (Expr::Var(v), t) => {
-                                println!("v = {:#?}, t = {:#?}", v, t);
-
                                 let eval_arg = eval_expr(args[i].clone());
-                                insert_var(ExprRep::Var(v.to_string()), eval_arg);
+                                match (t, eval_arg.clone()) {
+                                    (Type::Int, ExprRep::Int(_)) => {
+                                        insert_var(ExprRep::Var(v.to_string()), eval_arg)
+                                    }
+                                    (Type::Bool, ExprRep::Bool(_)) => {
+                                        insert_var(ExprRep::Var(v.to_string()), eval_arg)
+                                    }
+                                    _ => panic!("Return type does not match!"),
+                                };
                             }
-                            _ => panic!(),
+                            _ => panic!("Invalid param var!"),
                         }
                     }
                 }
 
-                // TODO: Add type checking on return !
-                interpreter(block)
+                let res = interpreter(block);
+                match (ret_type, res.clone()) {
+                    (Type::Int, ExprRep::Int(_)) => res,
+                    (Type::Bool, ExprRep::Bool(_)) => res,
+                    _ => panic!("Return type does not match!"),
+                }
             }
             _ => panic!("Could not find fn_var in map!"),
         },
@@ -891,6 +901,24 @@ mod interpreter_tests {
                 )
             ]),
             ExprRep::Int(2),
+        );
+    }
+    #[test]
+    fn test_eval_fn_call() {
+        assert_eq!(
+            interpreter(vec![
+                Expr::Fn(
+                    Box::new(Expr::Var("testfn1".to_string())),
+                    vec![(Expr::Var("i1".to_string()), Type::Int,),],
+                    Type::Int,
+                    vec![Expr::Return(Box::new(Expr::Var("i1".to_string())))]
+                ),
+                Expr::Return(Box::new(Expr::FnCall(
+                    Box::new(Expr::Var("testfn1".to_string())),
+                    vec![Expr::Int(5)]
+                )))
+            ]),
+            ExprRep::Int(5)
         );
     }
 }
