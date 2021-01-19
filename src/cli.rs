@@ -34,9 +34,19 @@ struct Opt {
 pub fn cli() {
     let opt = Opt::from_args();
 
-    let tree = parser("fn testfn(a: i32) -> i32 { return a } return testfn(5)")
-        .unwrap()
-        .1;
+    let tree = parser(
+        "
+
+        fn testfn1(a:i32) -> i32 {return a}
+        fn testfn2(c:i32) -> i32 {return c}
+        fn testfn3(c:i32) -> i32 {return c}
+        fn testfn4(c:i32) -> i32 {return c}
+        let b:i32 = testfn1(5) + testfn2(2) + testfn3(3) + testfn4(5)
+        return b
+        ",
+    )
+    .unwrap()
+    .1;
 
     if opt.tree {
         println!("Tree = {:#?}", tree);

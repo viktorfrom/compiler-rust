@@ -2,12 +2,12 @@ pub fn program() -> String {
     let program = "
 
         fn testfn1(a: bool) -> i32 {
-            let c: i32 = (((1 + 2 + 3)));
+            let b: i32 = (((1 + 2 + 3)));
             if a {
-                let b: i32 = 1;
-                return b
+                let c: i32 = 1;
+                return c
             } else {
-                return (c)
+                return (b)
             };
         }
 
@@ -15,21 +15,23 @@ pub fn program() -> String {
             {{{ return testfn1(true); }}}
         }
 
-        fn testfn3(b: bool, c: bool) -> i32 {
-            let d: bool = b && c;
-            let n: i32 = 0;
-            while d == true {
+        fn testfn3(d: bool, e: bool) -> i32 {
+            let f: bool = d && e;
+            let n: i32 = 1;
+            while f == true {
                 n += 1;
-                d = false;
+                f = false;
             };
             return n;    
         }
 
         fn main() -> i32 {
-            let a: i32 = testfn2(); 
-            let b: i32 = testfn3(true, true);
-            return a + b
+            let g: i32 = testfn2(); 
+            let h: i32 = testfn3(true, true);
+            return g + h
         }
+
+        return main()
 
         "
     .to_string();

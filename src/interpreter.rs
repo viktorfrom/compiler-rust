@@ -128,8 +128,8 @@ fn eval_while(cond: Expr, block: Vec<Expr>) -> ExprRep {
 
 fn eval_let(var: Expr, _var_type: Type, expr: Expr) -> ExprRep {
     match (var, eval_expr(expr)) {
-        (Expr::Var(n), ExprRep::Int(val)) => insert_var(ExprRep::Var(n), ExprRep::Int(val)),
-        (Expr::Var(n), ExprRep::Bool(val)) => insert_var(ExprRep::Var(n), ExprRep::Bool(val)),
+        (Expr::Var(v), ExprRep::Int(val)) => insert_var(ExprRep::Var(v), ExprRep::Int(val)),
+        (Expr::Var(v), ExprRep::Bool(val)) => insert_var(ExprRep::Var(v), ExprRep::Bool(val)),
         _ => panic!("Invalid let expr!"),
     }
 }
@@ -139,7 +139,8 @@ fn eval_return(expr: Expr) -> ExprRep {
 }
 
 fn eval_bin_expr(l: Expr, op: Op, r: Expr) -> ExprRep {
-    match (l, r.clone()) {
+    println!("l = {:#?}, expr = {:#?} ", l, r);
+    match (l.clone(), r.clone()) {
         (Expr::Int(left), Expr::Int(right)) => eval_int_expr(left, op, right),
         (Expr::Int(v), Expr::BinExpr(_, _, _)) => match eval_expr(r) {
             ExprRep::Int(r) => eval_int_expr(v, op, r),
@@ -159,7 +160,17 @@ fn eval_bin_expr(l: Expr, op: Op, r: Expr) -> ExprRep {
             _ => ExprRep::Bool(right),
         },
         (Expr::Var(_), Expr::BinExpr(_, _, _)) => eval_expr(r),
-
+        (Expr::Var(_), Expr::FnCall(_, _)) => eval_expr(r),
+        (Expr::FnCall(_, _), Expr::BinExpr(_, _, _)) => match (eval_expr(l), eval_expr(r)) {
+            (ExprRep::Int(l), ExprRep::Int(r)) => eval_int_expr(l, op, r),
+            (ExprRep::Bool(l), ExprRep::Bool(r)) => eval_bool_expr(l, op, r),
+            _ => panic!("Invalid bin expr!"),
+        },
+        (Expr::FnCall(_, _), Expr::FnCall(_, _)) => match (eval_expr(l), eval_expr(r)) {
+            (ExprRep::Int(l), ExprRep::Int(r)) => eval_int_expr(l, op, r),
+            (ExprRep::Bool(l), ExprRep::Bool(r)) => eval_bool_expr(l, op, r),
+            _ => panic!("Invalid bin expr!"),
+        },
         _ => panic!("Invalid bin expr!"),
     }
 }
@@ -643,6 +654,87 @@ mod interpreter_tests {
             )),
         )]);
         assert_eq!(read_var("c3"), ExprRep::Bool(false));
+        interpreter(vec![
+            Expr::Fn(
+                Box::new(Expr::Var("fnc1".to_string())),
+                vec![(Expr::Var("c4".to_string()), Type::Int)],
+                Type::Int,
+                vec![Expr::Return(Box::new(Expr::Var("c4".to_string())))],
+            ),
+            Expr::Let(
+                Box::new(Expr::Var("c5".to_string())),
+                Type::Int,
+                Box::new(Expr::BinExpr(
+                    Box::new(Expr::Var("".to_string())),
+                    Op::AssOp(AssOp::Eq),
+                    Box::new(Expr::FnCall(
+                        Box::new(Expr::Var("fnc1".to_string())),
+                        vec![Expr::Int(5)],
+                    )),
+                )),
+            ),
+        ]);
+        assert_eq!(read_var("c5"), ExprRep::Int(5));
+        interpreter(vec![
+            Expr::Fn(
+                Box::new(Expr::Var("fnc2".to_string())),
+                vec![(Expr::Var("c6".to_string()), Type::Int)],
+                Type::Int,
+                vec![Expr::Return(Box::new(Expr::Var("c6".to_string())))],
+            ),
+            Expr::Fn(
+                Box::new(Expr::Var("fnc3".to_string())),
+                vec![(Expr::Var("c7".to_string()), Type::Int)],
+                Type::Int,
+                vec![Expr::Return(Box::new(Expr::Var("c7".to_string())))],
+            ),
+            Expr::Fn(
+                Box::new(Expr::Var("fnc4".to_string())),
+                vec![(Expr::Var("c8".to_string()), Type::Int)],
+                Type::Int,
+                vec![Expr::Return(Box::new(Expr::Var("c8".to_string())))],
+            ),
+            Expr::Fn(
+                Box::new(Expr::Var("fnc5".to_string())),
+                vec![(Expr::Var("c9".to_string()), Type::Int)],
+                Type::Int,
+                vec![Expr::Return(Box::new(Expr::Var("c9".to_string())))],
+            ),
+            Expr::Let(
+                Box::new(Expr::Var("c10".to_string())),
+                Type::Int,
+                Box::new(Expr::BinExpr(
+                    Box::new(Expr::Var("".to_string())),
+                    Op::AssOp(AssOp::Eq),
+                    Box::new(Expr::BinExpr(
+                        Box::new(Expr::FnCall(
+                            Box::new(Expr::Var("fnc2".to_string())),
+                            vec![Expr::Int(5)],
+                        )),
+                        Op::AriOp(AriOp::Add),
+                        Box::new(Expr::BinExpr(
+                            Box::new(Expr::FnCall(
+                                Box::new(Expr::Var("fnc3".to_string())),
+                                vec![Expr::Int(2)],
+                            )),
+                            Op::AriOp(AriOp::Add),
+                            Box::new(Expr::BinExpr(
+                                Box::new(Expr::FnCall(
+                                    Box::new(Expr::Var("fnc4".to_string())),
+                                    vec![Expr::Int(3)],
+                                )),
+                                Op::AriOp(AriOp::Add),
+                                Box::new(Expr::FnCall(
+                                    Box::new(Expr::Var("fnc5".to_string())),
+                                    vec![Expr::Int(5)],
+                                )),
+                            )),
+                        )),
+                    )),
+                )),
+            ),
+        ]);
+        assert_eq!(read_var("c10"), ExprRep::Int(15));
     }
 
     #[test]
