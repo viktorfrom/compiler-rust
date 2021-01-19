@@ -8,15 +8,10 @@ use std::sync::Mutex;
 pub enum ExprRep {
     Int(i32),
     Var(String),
-    // Var(String),
-    // Const(Box<IntRep>),
     Bool(bool),
-    // Function(Vec<Box<ExprTree>>, Type, ExprTree),
-    // Undefined(Type),
 
-    // TypeError(String),
+    Fn(Vec<(Expr, Type)>, Type, Vec<Expr>),
 
-    // NewLine,
     Null,
 }
 
@@ -29,57 +24,54 @@ lazy_static! {
         let s = Vec::new();
         Mutex::new(s)
     };
-    static ref FUNCTION_MAP: Mutex<HashMap<&'static str, Vec<Vec<ExprRep>>>> = {
+    static ref FUNCTION_MAP: Mutex<HashMap<&'static str, ExprRep>> = {
         let f = HashMap::new();
         Mutex::new(f)
     };
 }
 
-// pub fn insert_function(var: Content, func: Vec<Vec<Expr>>) -> Content {
-//     match var {
-//         Content::Str(v) => {
-//             let mut map = FUNCTION_MAP.lock().unwrap();
-//             map.insert(Box::leak(v.into_boxed_str()), func);
-//         }
-//         _ => panic!("ERROR: Can't func '{:?}' assign to var", func),
-//     }
-//     // println!("hashmap = {:#?}", FUNCTION_MAP.lock().unwrap());
-//     return Content::Null;
-// }
-
-pub fn insert_var(var: ExprRep, val: ExprRep) -> ExprRep {
+pub fn insert_fn(var: ExprRep, func: ExprRep) -> ExprRep {
     match var {
+        ExprRep::Var(v) => {
+            let mut map = FUNCTION_MAP.lock().unwrap();
+            map.insert(Box::leak(v.into_boxed_str()), func);
+        }
+        _ => panic!("Could not insert fn {:#?} into map", func),
+    }
+    return ExprRep::Null;
+}
+
+pub fn insert_var(key: ExprRep, val: ExprRep) -> ExprRep {
+    match key {
         ExprRep::Var(v) => {
             let mut map = MEMORY.lock().unwrap();
             map.insert(Box::leak(v.into_boxed_str()), val);
         }
-        _ => panic!("ERROR: Can't assign val '{:?}' to var", val),
+        _ => panic!("Could not insert key '{:?}' into map", key),
     }
-    // println!("hashmap = {:#?}", MEMORY.lock().unwrap());
     return ExprRep::Null;
 }
 
-pub fn read_from_var(var: &str) -> ExprRep {
+pub fn read_var(key: &str) -> ExprRep {
     let map = MEMORY.lock().unwrap();
-    // println!("map = {:#?}", map);
 
-    match map.get(&var) {
+    match map.get(&key) {
         Some(var) => match var {
             ExprRep::Int(num) => ExprRep::Int(*num),
             ExprRep::Bool(b) => ExprRep::Bool(*b),
             ExprRep::Var(v) => ExprRep::Var(v.to_string()),
-            _ => panic!("Could not match var '{:#?}' in HashMap", var),
+            _ => panic!("Could not find var '{:#?}' in map", var),
         },
-        None => {
-            ExprRep::Null
-            // panic!("ERROR: Var '{:?}' not found in scope", var);
-        }
+        None => ExprRep::Null,
     }
 }
 
-// pub fn read_from_func(key: &str) -> (&str, Vec<Vec<Expr>>) {
-//     let map = FUNCTION_MAP.lock().unwrap();
-//     let value = map.get(key);
-
-//     return (key, value.unwrap().to_vec());
-// }
+pub fn read_fn(key: &str) -> ExprRep {
+    let map = FUNCTION_MAP.lock().unwrap();
+    match map.get(key) {
+        Some(fn_expr) => fn_expr.clone(),
+        None => {
+            panic!("Could not find fn {:#?} in map", key)
+        }
+    }
+}

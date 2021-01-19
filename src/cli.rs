@@ -41,20 +41,11 @@ pub fn cli() {
         //     panic!("ERROR: Typechecker failed!");
         // }
     } else {
-        let tree = parser("let a:bool = 1 == 1 return a").unwrap().1;
-        println!("Tree = {:#?}", tree);
-
+        let tree = parser("fn testfn(a: i32) -> i32 {return a} return testfn(5)")
+            .unwrap()
+            .1;
+        // println!("Tree = {:#?}", tree);
         let res = interpreter(tree);
-        // let res = interpreter(vec![Expr::Let(
-        //     Box::new(Expr::Var("a".to_string())),
-        //     Type::Bool,
-        //     Box::new(Expr::BinExpr(
-        //         Box::new(Expr::Var("".to_string())),
-        //         Op::AssOp(AssOp::Eq),
-        //         Box::new(Expr::Bool(true)),
-        //     )),
-        // )]);
-
         println!("res = {:#?}", res);
 
         // if type_scope(tree.clone()) {

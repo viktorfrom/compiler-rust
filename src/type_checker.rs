@@ -105,7 +105,7 @@
 //     match if_param {
 //         Content::Bool(true) => type_block(block),
 //         Content::Bool(false) => Content::Null,
-//         Content::Str(s) => match read_from_var(&s.to_string()) {
+//         Content::Str(s) => match read_var(&s.to_string()) {
 //             Content::Bool(true) => type_block(block),
 //             _ => Content::Null,
 //         },
@@ -173,7 +173,7 @@
 //         Content::Str(var.to_string()),
 //     );
 
-//     let value = read_from_var(var);
+//     let value = read_var(var);
 //     return Content::Return(var.to_string(), Box::new(value));
 // }
 
@@ -225,7 +225,7 @@
 //             insert_var(Content::Str(left), Content::Num(right))
 //         }
 //         (Content::Str(left), Content::ContentOp(ContentOp::Integer), Content::Str(right)) => {
-//             insert_var(Content::Str(left), read_from_var(&right.to_string()))
+//             insert_var(Content::Str(left), read_var(&right.to_string()))
 //         }
 //         (Content::Str(left), Content::ContentOp(ContentOp::Bool), right) => {
 //             insert_var(Content::Str(left), right)

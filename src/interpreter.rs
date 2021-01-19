@@ -18,7 +18,7 @@ fn eval_expr(expr: Expr) -> ExprRep {
     match expr {
         Expr::Int(i) => ExprRep::Int(i),
         Expr::Bool(b) => ExprRep::Bool(b),
-        Expr::Var(n) => read_from_var(&n),
+        Expr::Var(n) => read_var(&n),
 
         Expr::BinExpr(l, op, r) => eval_bin_expr(*l, op, *r),
         Expr::VarExpr(var, op, expr) => eval_var_expr(*var, op, *expr),
@@ -29,14 +29,57 @@ fn eval_expr(expr: Expr) -> ExprRep {
         Expr::IfElse(cond, block1, block2) => eval_if_else(*cond, block1, block2),
         Expr::While(cond, block) => eval_while(*cond, block),
 
-        // Expr::FnCall(fn_var, args) => eval_fn_call(fn_var, args),
+        Expr::Fn(fn_var, params, ret_type, block) => eval_fn(*fn_var, params, ret_type, block),
+        Expr::FnCall(fn_var, args) => eval_fn_call(*fn_var, args),
         Expr::Return(expr) => eval_return(*expr),
-        _ => panic!("Invalid expr!"),
+    }
+}
+
+fn eval_fn(fn_var: Expr, params: Vec<(Expr, Type)>, ret_type: Type, block: Vec<Expr>) -> ExprRep {
+    match fn_var {
+        Expr::Var(a) => {
+            insert_fn(
+                ExprRep::Var(a.to_string()),
+                ExprRep::Fn(params, ret_type, block),
+            );
+        }
+        _ => panic!("Fn stmt fail!"),
+    }
+    return ExprRep::Null;
+}
+
+fn eval_fn_call(fn_var: Expr, args: Vec<Expr>) -> ExprRep {
+    match fn_var {
+        Expr::Var(fn_var) => match read_fn(&fn_var) {
+            ExprRep::Fn(params, ret_type, block) => {
+                if params.len() != args.clone().len() {
+                    panic!("params != args")
+                }
+
+                for i in 0..params.len() {
+                    for x in params.clone() {
+                        match &x {
+                            (Expr::Var(v), t) => {
+                                println!("v = {:#?}, t = {:#?}", v, t);
+
+                                let eval_arg = eval_expr(args[i].clone());
+                                insert_var(ExprRep::Var(v.to_string()), eval_arg);
+                            }
+                            _ => panic!(),
+                        }
+                    }
+                }
+
+                // TODO: Add type checking on return !
+                interpreter(block)
+            }
+            _ => panic!("Could not find fn_var in map!"),
+        },
+        _ => panic!("Invalid fn_var!"),
     }
 }
 
 fn eval_if(cond: Expr, block: Vec<Expr>) -> ExprRep {
-    println!("cond = {:#?}", eval_expr(cond.clone()));
     match eval_expr(cond) {
         ExprRep::Bool(c) => {
             if c {
@@ -62,7 +105,6 @@ fn eval_if_else(cond: Expr, block1: Vec<Expr>, block2: Vec<Expr>) -> ExprRep {
 }
 
 fn eval_while(cond: Expr, block: Vec<Expr>) -> ExprRep {
-    println!("cond = {:#?}", eval_expr(cond.clone()));
     match eval_expr(cond) {
         ExprRep::Bool(c) => {
             if c {
@@ -74,14 +116,7 @@ fn eval_while(cond: Expr, block: Vec<Expr>) -> ExprRep {
     }
 }
 
-// fn eval_fn_call(fn_var: Box<Expr>, args: Vec<Expr>) -> ExprRep {
-//     println!("var = {:#?}, args = {:#?}", fn_var, args);
-//     return ExprRep::Null
-// }
-
 fn eval_let(var: Expr, _var_type: Type, expr: Expr) -> ExprRep {
-    // println!("var = {:#?}", var);
-    // println!("expr = {:#?}", eval_expr(expr.clone()));
     match (var, eval_expr(expr)) {
         (Expr::Var(n), ExprRep::Int(val)) => insert_var(ExprRep::Var(n), ExprRep::Int(val)),
         (Expr::Var(n), ExprRep::Bool(val)) => insert_var(ExprRep::Var(n), ExprRep::Bool(val)),
@@ -100,7 +135,7 @@ fn eval_bin_expr(l: Expr, op: Op, r: Expr) -> ExprRep {
             ExprRep::Int(r) => eval_int_expr(v, op, r),
             _ => ExprRep::Null,
         },
-        (Expr::Var(v), Expr::Int(right)) => match read_from_var(&v) {
+        (Expr::Var(v), Expr::Int(right)) => match read_var(&v) {
             ExprRep::Int(val) => eval_int_expr(val, op, right),
             _ => ExprRep::Int(right),
         },
@@ -109,7 +144,7 @@ fn eval_bin_expr(l: Expr, op: Op, r: Expr) -> ExprRep {
             ExprRep::Bool(r) => eval_bool_expr(v, op, r),
             _ => ExprRep::Null,
         },
-        (Expr::Var(v), Expr::Bool(right)) => match read_from_var(&v) {
+        (Expr::Var(v), Expr::Bool(right)) => match read_var(&v) {
             ExprRep::Bool(val) => eval_bool_expr(val, op, right),
             _ => ExprRep::Bool(right),
         },
@@ -119,7 +154,7 @@ fn eval_bin_expr(l: Expr, op: Op, r: Expr) -> ExprRep {
     }
 }
 
-/// Inserts the variable into memory or updates existing value
+/// Updates existing value in memory
 fn eval_var_expr(var: Expr, op: Op, expr: Expr) -> ExprRep {
     match op {
         Op::AriOp(op) => var_ari_op(var, op, expr),
@@ -159,47 +194,46 @@ fn eval_bool_expr(l: bool, op: Op, r: bool) -> ExprRep {
 }
 
 fn var_ari_op(var: Expr, op: AriOp, expr: Expr) -> ExprRep {
-    println!("var = {:#?}, Expr = {:#?}", var, expr);
     match op {
         AriOp::Add => match (var, expr) {
-            (Expr::Var(v), Expr::Var(expr)) => match (read_from_var(&v), read_from_var(&expr)) {
+            (Expr::Var(v), Expr::Var(expr)) => match (read_var(&v), read_var(&expr)) {
                 (ExprRep::Int(v1), ExprRep::Int(v2)) => ExprRep::Int(v1 + v2),
                 _ => ExprRep::Null,
             },
-            (Expr::Var(v), Expr::Int(expr)) => match read_from_var(&v) {
+            (Expr::Var(v), Expr::Int(expr)) => match read_var(&v) {
                 ExprRep::Int(v1) => ExprRep::Int(v1 + expr),
                 _ => ExprRep::Null,
             },
             _ => panic!("Var Add fail!"),
         },
         AriOp::Sub => match (var, expr) {
-            (Expr::Var(v), Expr::Var(expr)) => match (read_from_var(&v), read_from_var(&expr)) {
+            (Expr::Var(v), Expr::Var(expr)) => match (read_var(&v), read_var(&expr)) {
                 (ExprRep::Int(v1), ExprRep::Int(v2)) => ExprRep::Int(v1 - v2),
                 _ => ExprRep::Null,
             },
-            (Expr::Var(v), Expr::Int(expr)) => match read_from_var(&v) {
+            (Expr::Var(v), Expr::Int(expr)) => match read_var(&v) {
                 ExprRep::Int(v1) => ExprRep::Int(v1 - expr),
                 _ => ExprRep::Null,
             },
             _ => panic!("Var Sub fail!"),
         },
         AriOp::Div => match (var, expr) {
-            (Expr::Var(v), Expr::Var(expr)) => match (read_from_var(&v), read_from_var(&expr)) {
+            (Expr::Var(v), Expr::Var(expr)) => match (read_var(&v), read_var(&expr)) {
                 (ExprRep::Int(v1), ExprRep::Int(v2)) => ExprRep::Int(v1 / v2),
                 _ => ExprRep::Null,
             },
-            (Expr::Var(v), Expr::Int(expr)) => match read_from_var(&v) {
+            (Expr::Var(v), Expr::Int(expr)) => match read_var(&v) {
                 ExprRep::Int(v1) => ExprRep::Int(v1 / expr),
                 _ => ExprRep::Null,
             },
             _ => panic!("Var Div fail!"),
         },
         AriOp::Mul => match (var, expr) {
-            (Expr::Var(v), Expr::Var(expr)) => match (read_from_var(&v), read_from_var(&expr)) {
+            (Expr::Var(v), Expr::Var(expr)) => match (read_var(&v), read_var(&expr)) {
                 (ExprRep::Int(v1), ExprRep::Int(v2)) => ExprRep::Int(v1 * v2),
                 _ => ExprRep::Null,
             },
-            (Expr::Var(v), Expr::Int(expr)) => match read_from_var(&v) {
+            (Expr::Var(v), Expr::Int(expr)) => match read_var(&v) {
                 ExprRep::Int(v1) => ExprRep::Int(v1 * expr),
                 _ => ExprRep::Null,
             },
@@ -462,7 +496,7 @@ mod interpreter_tests {
                 Box::new(Expr::Int(2)),
             ),
         ]);
-        assert_eq!(read_from_var("b1"), ExprRep::Int(4));
+        assert_eq!(read_var("b1"), ExprRep::Int(4));
         let res = interpreter(vec![
             Expr::Let(
                 Box::new(Expr::Var("b2".to_string())),
@@ -578,7 +612,7 @@ mod interpreter_tests {
                 Box::new(Expr::Int(1)),
             )),
         )]);
-        assert_eq!(read_from_var("c1"), ExprRep::Int(1));
+        assert_eq!(read_var("c1"), ExprRep::Int(1));
         interpreter(vec![Expr::Let(
             Box::new(Expr::Var("c2".to_string())),
             Type::Bool,
@@ -588,7 +622,7 @@ mod interpreter_tests {
                 Box::new(Expr::Bool(true)),
             )),
         )]);
-        assert_eq!(read_from_var("c2"), ExprRep::Bool(true));
+        assert_eq!(read_var("c2"), ExprRep::Bool(true));
         interpreter(vec![Expr::Let(
             Box::new(Expr::Var("c3".to_string())),
             Type::Bool,
@@ -598,7 +632,7 @@ mod interpreter_tests {
                 Box::new(Expr::Bool(true)),
             )),
         )]);
-        assert_eq!(read_from_var("c3"), ExprRep::Bool(false));
+        assert_eq!(read_var("c3"), ExprRep::Bool(false));
     }
 
     #[test]
@@ -799,7 +833,6 @@ mod interpreter_tests {
         );
         assert_eq!(
             interpreter(vec![
-
                 Expr::Let(
                     Box::new(Expr::Var("g1".to_string())),
                     Type::Bool,
@@ -830,7 +863,6 @@ mod interpreter_tests {
         );
         assert_eq!(
             interpreter(vec![
-
                 Expr::Let(
                     Box::new(Expr::Var("h1".to_string())),
                     Type::Bool,
