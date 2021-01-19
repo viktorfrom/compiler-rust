@@ -95,22 +95,22 @@ fn eval_return(expr: Expr) -> ExprRep {
 
 fn eval_bin_expr(l: Expr, op: Op, r: Expr) -> ExprRep {
     match (l, r.clone()) {
-        (Expr::Int(left), Expr::Int(right)) => eval_ari_op(left, op, right),
+        (Expr::Int(left), Expr::Int(right)) => eval_int_expr(left, op, right),
         (Expr::Int(v), Expr::BinExpr(_, _, _)) => match eval_expr(r) {
-            ExprRep::Int(r) => eval_ari_op(v, op, r),
+            ExprRep::Int(r) => eval_int_expr(v, op, r),
             _ => ExprRep::Null,
         },
         (Expr::Var(v), Expr::Int(right)) => match read_from_var(&v) {
-            ExprRep::Int(val) => ExprRep::Int(val + right),
+            ExprRep::Int(val) => eval_int_expr(val, op, right),
             _ => ExprRep::Int(right),
         },
-        (Expr::Bool(left), Expr::Bool(right)) => eval_log_op(left, op, right),
+        (Expr::Bool(left), Expr::Bool(right)) => eval_bool_expr(left, op, right),
         (Expr::Bool(v), Expr::BinExpr(_, _, _)) => match eval_expr(r) {
-            ExprRep::Bool(r) => eval_log_op(v, op, r),
+            ExprRep::Bool(r) => eval_bool_expr(v, op, r),
             _ => ExprRep::Null,
         },
         (Expr::Var(v), Expr::Bool(right)) => match read_from_var(&v) {
-            ExprRep::Bool(val) => eval_log_op(val, op, right),
+            ExprRep::Bool(val) => eval_bool_expr(val, op, right),
             _ => ExprRep::Bool(right),
         },
         (Expr::Var(_), Expr::BinExpr(_, _, _)) => eval_expr(r),
@@ -129,20 +129,32 @@ fn eval_var_expr(var: Expr, op: Op, expr: Expr) -> ExprRep {
     }
 }
 
-fn eval_ari_op(l: i32, op: Op, r: i32) -> ExprRep {
+fn eval_int_expr(l: i32, op: Op, r: i32) -> ExprRep {
     match op {
         Op::AriOp(AriOp::Add) => ExprRep::Int(l + r),
         Op::AriOp(AriOp::Sub) => ExprRep::Int(l - r),
         Op::AriOp(AriOp::Div) => ExprRep::Int(l / r),
         Op::AriOp(AriOp::Mul) => ExprRep::Int(l * r),
-        _ => panic!("Invalid Ari op!"),
+        Op::RelOp(RelOp::Eq) => ExprRep::Bool(l == r),
+        Op::RelOp(RelOp::Neq) => ExprRep::Bool(l != r),
+        Op::RelOp(RelOp::Leq) => ExprRep::Bool(l <= r),
+        Op::RelOp(RelOp::Geq) => ExprRep::Bool(l >= r),
+        Op::RelOp(RelOp::Les) => ExprRep::Bool(l < r),
+        Op::RelOp(RelOp::Gre) => ExprRep::Bool(l > r),
+        _ => panic!("Invalid Int expr!"),
     }
 }
-fn eval_log_op(l: bool, op: Op, r: bool) -> ExprRep {
+fn eval_bool_expr(l: bool, op: Op, r: bool) -> ExprRep {
     match op {
         Op::LogOp(LogOp::And) => ExprRep::Bool(l && r),
         Op::LogOp(LogOp::Or) => ExprRep::Bool(l || r),
-        _ => panic!("Invalid Log op!"),
+        Op::RelOp(RelOp::Eq) => ExprRep::Bool(l == r),
+        Op::RelOp(RelOp::Neq) => ExprRep::Bool(l != r),
+        Op::RelOp(RelOp::Leq) => ExprRep::Bool(l <= r),
+        Op::RelOp(RelOp::Geq) => ExprRep::Bool(l >= r),
+        Op::RelOp(RelOp::Les) => ExprRep::Bool(l < r),
+        Op::RelOp(RelOp::Gre) => ExprRep::Bool(l > r),
+        _ => panic!("Invalid Bool expr!"),
     }
 }
 
@@ -254,9 +266,9 @@ fn var_rel_op(var: Expr, rel_op: RelOp, expr: Expr) -> ExprRep {
         RelOp::Eq => match (var.clone(), eval_expr(var), eval_expr(expr)) {
             (Expr::Var(_), ExprRep::Bool(b1), ExprRep::Bool(b2)) => {
                 if b1 == b2 {
-                    return ExprRep::Bool(true)
+                    return ExprRep::Bool(true);
                 } else {
-                    return ExprRep::Bool(false)
+                    return ExprRep::Bool(false);
                 }
             }
             _ => ExprRep::Null,
@@ -264,9 +276,9 @@ fn var_rel_op(var: Expr, rel_op: RelOp, expr: Expr) -> ExprRep {
         RelOp::Neq => match (var.clone(), eval_expr(var), eval_expr(expr)) {
             (Expr::Var(_), ExprRep::Bool(b1), ExprRep::Bool(b2)) => {
                 if b1 != b2 {
-                    return ExprRep::Bool(true)
+                    return ExprRep::Bool(true);
                 } else {
-                    return ExprRep::Bool(false)
+                    return ExprRep::Bool(false);
                 }
             }
             _ => ExprRep::Null,
@@ -274,44 +286,43 @@ fn var_rel_op(var: Expr, rel_op: RelOp, expr: Expr) -> ExprRep {
         RelOp::Leq => match (var.clone(), eval_expr(var), eval_expr(expr)) {
             (Expr::Var(_), ExprRep::Int(v1), ExprRep::Int(v2)) => {
                 if v1 <= v2 {
-                    return ExprRep::Bool(true)
+                    return ExprRep::Bool(true);
                 } else {
-                    return ExprRep::Bool(false)
+                    return ExprRep::Bool(false);
                 }
             }
             _ => ExprRep::Null,
-        }, 
+        },
         RelOp::Geq => match (var.clone(), eval_expr(var), eval_expr(expr)) {
             (Expr::Var(_), ExprRep::Int(v1), ExprRep::Int(v2)) => {
-                println!("v1 = {:#?}, v2 = {:#?}, ", v1, v2);
                 if v1 >= v2 {
-                    return ExprRep::Bool(true)
+                    return ExprRep::Bool(true);
                 } else {
-                    return ExprRep::Bool(false)
+                    return ExprRep::Bool(false);
                 }
             }
             _ => ExprRep::Null,
-        }, 
+        },
         RelOp::Les => match (var.clone(), eval_expr(var), eval_expr(expr)) {
             (Expr::Var(_), ExprRep::Int(v1), ExprRep::Int(v2)) => {
                 if v1 < v2 {
-                    return ExprRep::Bool(true)
+                    return ExprRep::Bool(true);
                 } else {
-                    return ExprRep::Bool(false)
+                    return ExprRep::Bool(false);
                 }
             }
             _ => ExprRep::Null,
-        }, 
+        },
         RelOp::Gre => match (var.clone(), eval_expr(var), eval_expr(expr)) {
             (Expr::Var(_), ExprRep::Int(v1), ExprRep::Int(v2)) => {
                 if v1 > v2 {
-                    return ExprRep::Bool(true)
+                    return ExprRep::Bool(true);
                 } else {
-                    return ExprRep::Bool(false)
+                    return ExprRep::Bool(false);
                 }
             }
             _ => ExprRep::Null,
-        }, 
+        },
     }
 }
 
@@ -354,11 +365,71 @@ mod interpreter_tests {
     }
 
     #[test]
-    fn test_eval_ari_op() {
-        assert_eq!(eval_ari_op(1, Op::AriOp(AriOp::Add), 2), ExprRep::Int(3));
-        assert_eq!(eval_ari_op(3, Op::AriOp(AriOp::Sub), 2), ExprRep::Int(1));
-        assert_eq!(eval_ari_op(10, Op::AriOp(AriOp::Div), 2), ExprRep::Int(5));
-        assert_eq!(eval_ari_op(2, Op::AriOp(AriOp::Mul), 5), ExprRep::Int(10));
+    fn test_eval_int_expr() {
+        assert_eq!(eval_int_expr(1, Op::AriOp(AriOp::Add), 2), ExprRep::Int(3));
+        assert_eq!(eval_int_expr(3, Op::AriOp(AriOp::Sub), 2), ExprRep::Int(1));
+        assert_eq!(eval_int_expr(10, Op::AriOp(AriOp::Div), 2), ExprRep::Int(5));
+        assert_eq!(eval_int_expr(2, Op::AriOp(AriOp::Mul), 5), ExprRep::Int(10));
+        assert_eq!(
+            eval_int_expr(1, Op::RelOp(RelOp::Eq), 1),
+            ExprRep::Bool(true)
+        );
+        assert_eq!(
+            eval_int_expr(2, Op::RelOp(RelOp::Neq), 1),
+            ExprRep::Bool(true)
+        );
+        assert_eq!(
+            eval_int_expr(1, Op::RelOp(RelOp::Leq), 5),
+            ExprRep::Bool(true)
+        );
+        assert_eq!(
+            eval_int_expr(5, Op::RelOp(RelOp::Geq), 5),
+            ExprRep::Bool(true)
+        );
+        assert_eq!(
+            eval_int_expr(4, Op::RelOp(RelOp::Les), 5),
+            ExprRep::Bool(true)
+        );
+        assert_eq!(
+            eval_int_expr(6, Op::RelOp(RelOp::Gre), 5),
+            ExprRep::Bool(true)
+        );
+    }
+
+    #[test]
+    fn test_eval_bool_expr() {
+        assert_eq!(
+            eval_bool_expr(true, Op::LogOp(LogOp::And), false),
+            ExprRep::Bool(false)
+        );
+        assert_eq!(
+            eval_bool_expr(true, Op::LogOp(LogOp::Or), false),
+            ExprRep::Bool(true)
+        );
+        assert_eq!(
+            eval_bool_expr(true, Op::RelOp(RelOp::Eq), true),
+            ExprRep::Bool(true)
+        );
+        assert_eq!(
+            eval_bool_expr(true, Op::RelOp(RelOp::Neq), false),
+            ExprRep::Bool(true)
+        );
+        assert_eq!(
+            eval_bool_expr(false, Op::RelOp(RelOp::Leq), true),
+            ExprRep::Bool(true)
+        );
+        assert_eq!(
+            eval_bool_expr(true, Op::RelOp(RelOp::Geq), false),
+            ExprRep::Bool(true)
+        );
+        assert_eq!(
+            eval_bool_expr(false, Op::RelOp(RelOp::Les), true),
+            ExprRep::Bool(true)
+        );
+        assert_eq!(
+            eval_bool_expr(true, Op::RelOp(RelOp::Gre), false),
+            ExprRep::Bool(true)
+        );
     }
 
     #[test]
@@ -605,8 +676,8 @@ mod interpreter_tests {
                 Expr::VarExpr(
                     Box::new(Expr::Var("d4".to_string())),
                     Op::AssOp(AssOp::AddEq),
-                    Box::new(Expr::Int(1))),
-
+                    Box::new(Expr::Int(1))
+                ),
                 Expr::Return(Box::new(Expr::VarExpr(
                     Box::new(Expr::Var("d4".to_string())),
                     Op::AriOp(AriOp::Add),
@@ -672,115 +743,122 @@ mod interpreter_tests {
             ]),
             ExprRep::Int(10)
         );
-        // assert_eq!(
-        //     interpreter(vec![
-        //         Expr::VarExpr(
-        //             Box::new(Expr::Var("e1".to_string())),
-        //             Op::AssOp(AssOp::Eq),
-        //             Box::new(Expr::Int(2)),
-        //         ),
-        //         Expr::Return(Box::new(Expr::BinExpr(
-        //             Box::new(Expr::Var("e1".to_string())),
-        //             Op::AriOp(AriOp::Add),
-        //             Box::new(Expr::Int(1)),
-        //         ))),
-        //     ]),
-        //     ExprRep::Int(3)
-        // );
     }
 
-    // #[test]
-    // fn test_eval_if() {
-    //     assert_eq!(
-    //         interpreter(vec![Expr::If(
-    //             Box::new(Expr::Bool(true)),
-    //             vec![Expr::Return(Box::new(Expr::Int(1)))]
-    //         )]),
-    //         ExprRep::Int(1)
-    //     );
+    #[test]
+    fn test_eval_if() {
+        assert_eq!(
+            interpreter(vec![Expr::If(
+                Box::new(Expr::Bool(true)),
+                vec![Expr::Return(Box::new(Expr::Int(1)))]
+            )]),
+            ExprRep::Int(1)
+        );
+        assert_eq!(
+            interpreter(vec![
+                Expr::Let(
+                    Box::new(Expr::Var("f1".to_string())),
+                    Type::Bool,
+                    Box::new(Expr::BinExpr(
+                        Box::new(Expr::Var("".to_string())),
+                        Op::AssOp(AssOp::Eq),
+                        Box::new(Expr::Bool(true)),
+                    )),
+                ),
+                Expr::Let(
+                    Box::new(Expr::Var("f2".to_string())),
+                    Type::Bool,
+                    Box::new(Expr::BinExpr(
+                        Box::new(Expr::Var("".to_string())),
+                        Op::AssOp(AssOp::Eq),
+                        Box::new(Expr::Bool(true)),
+                    )),
+                ),
+                Expr::If(
+                    Box::new(Expr::VarExpr(
+                        Box::new(Expr::Var("f1".to_string())),
+                        Op::RelOp(RelOp::Eq),
+                        Box::new(Expr::Var("f2".to_string()))
+                    )),
+                    vec![Expr::Return(Box::new(Expr::Int(1)))]
+                )
+            ]),
+            ExprRep::Int(1)
+        );
+    }
 
-    //     assert_eq!(
-    //         interpreter(vec![
-    //             Expr::VarExpr(
-    //                 Box::new(Expr::Var("f1".to_string())),
-    //                 Op::AssOp(AssOp::Eq),
-    //                 Box::new(Expr::Bool(true)),
-    //             ),
-    //             Expr::VarExpr(
-    //                 Box::new(Expr::Var("f2".to_string())),
-    //                 Op::AssOp(AssOp::Eq),
-    //                 Box::new(Expr::Bool(true)),
-    //             ),
-    //             Expr::If(
-    //                 Box::new(Expr::VarExpr(
-    //                     Box::new(Expr::Var("f1".to_string())),
-    //                     Op::RelOp(RelOp::Eq),
-    //                     Box::new(Expr::Var("f2".to_string()))
-    //                 )),
-    //                 vec![Expr::Return(Box::new(Expr::Int(1)))]
-    //             )
-    //         ]),
-    //         ExprRep::Int(1)
-    //     );
-    // }
-    // #[test]
-    // fn test_eval_if_else() {
-    //     assert_eq!(
-    //         interpreter(vec![Expr::IfElse(
-    //             Box::new(Expr::Bool(false)),
-    //             vec![Expr::Return(Box::new(Expr::Int(1)))],
-    //             vec![Expr::Return(Box::new(Expr::Int(2)))],
-    //         )]),
-    //         ExprRep::Int(2)
-    //     );
-    //     assert_eq!(
-    //         interpreter(vec![
-    //             Expr::VarExpr(
-    //                 Box::new(Expr::Var("g1".to_string())),
-    //                 Op::AssOp(AssOp::Eq),
-    //                 Box::new(Expr::Bool(true)),
-    //             ),
-    //             Expr::IfElse(
-    //                 Box::new(Expr::Var("g1".to_string())),
-    //                 vec![Expr::Return(Box::new(Expr::Int(2)))],
-    //                 vec![Expr::Return(Box::new(Expr::Int(1)))],
-    //             )
-    //         ]),
-    //         ExprRep::Int(2)
-    //     );
-    // }
+    #[test]
+    fn test_eval_if_else() {
+        assert_eq!(
+            interpreter(vec![Expr::IfElse(
+                Box::new(Expr::Bool(false)),
+                vec![Expr::Return(Box::new(Expr::Int(1)))],
+                vec![Expr::Return(Box::new(Expr::Int(2)))],
+            )]),
+            ExprRep::Int(2)
+        );
+        assert_eq!(
+            interpreter(vec![
 
-    // #[test]
-    // fn test_eval_while() {
-    //     assert_eq!(
-    //         interpreter(vec![Expr::While(
-    //             Box::new(Expr::Bool(true)),
-    //             vec![Expr::Return(Box::new(Expr::Bool(false)))]
-    //         )]),
-    //         ExprRep::Bool(false),
-    //     );
-    //     assert_eq!(
-    //         interpreter(vec![
-    //             Expr::VarExpr(
-    //                 Box::new(Expr::Var("h1".to_string())),
-    //                 Op::AssOp(AssOp::Eq),
-    //                 Box::new(Expr::Bool(true)),
-    //             ),
-    //             Expr::VarExpr(
-    //                 Box::new(Expr::Var("h2".to_string())),
-    //                 Op::AssOp(AssOp::Eq),
-    //                 Box::new(Expr::Bool(true)),
-    //             ),
-    //             Expr::While(
-    //                 Box::new(Expr::VarExpr(
-    //                     Box::new(Expr::Var("h1".to_string())),
-    //                     Op::RelOp(RelOp::Eq),
-    //                     Box::new(Expr::Var("h2".to_string()))
-    //                 )),
-    //                 vec![Expr::Return(Box::new(Expr::Int(2)))]
-    //             )
-    //         ]),
-    //         ExprRep::Int(2),
-    //     );
-    // }
+                Expr::Let(
+                    Box::new(Expr::Var("g1".to_string())),
+                    Type::Bool,
+                    Box::new(Expr::BinExpr(
+                        Box::new(Expr::Var("".to_string())),
+                        Op::AssOp(AssOp::Eq),
+                        Box::new(Expr::Bool(true)),
+                    )),
+                ),
+                Expr::IfElse(
+                    Box::new(Expr::Var("g1".to_string())),
+                    vec![Expr::Return(Box::new(Expr::Int(2)))],
+                    vec![Expr::Return(Box::new(Expr::Int(1)))],
+                )
+            ]),
+            ExprRep::Int(2)
+        );
+    }
+
+    #[test]
+    fn test_eval_while() {
+        assert_eq!(
+            interpreter(vec![Expr::While(
+                Box::new(Expr::Bool(true)),
+                vec![Expr::Return(Box::new(Expr::Bool(false)))]
+            )]),
+            ExprRep::Bool(false),
+        );
+        assert_eq!(
+            interpreter(vec![
+
+                Expr::Let(
+                    Box::new(Expr::Var("h1".to_string())),
+                    Type::Bool,
+                    Box::new(Expr::BinExpr(
+                        Box::new(Expr::Var("".to_string())),
+                        Op::AssOp(AssOp::Eq),
+                        Box::new(Expr::Bool(true)),
+                    )),
+                ),
+                Expr::Let(
+                    Box::new(Expr::Var("h2".to_string())),
+                    Type::Bool,
+                    Box::new(Expr::BinExpr(
+                        Box::new(Expr::Var("".to_string())),
+                        Op::AssOp(AssOp::Eq),
+                        Box::new(Expr::Bool(false)),
+                    )),
+                ),
+                Expr::While(
+                    Box::new(Expr::VarExpr(
+                        Box::new(Expr::Var("h1".to_string())),
+                        Op::RelOp(RelOp::Neq),
+                        Box::new(Expr::Var("h2".to_string()))
+                    )),
+                    vec![Expr::Return(Box::new(Expr::Int(2)))]
+                )
+            ]),
+            ExprRep::Int(2),
+        );
+    }
 }
