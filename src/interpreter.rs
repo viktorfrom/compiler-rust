@@ -127,8 +127,6 @@ fn eval_while(cond: Expr, block: Vec<Expr>) -> ExprRep {
 }
 
 fn eval_let(var: Expr, _var_type: Type, expr: Expr) -> ExprRep {
-    println!("v = {:#?}, e = {:#?}", var, expr); 
-    println!("v = {:#?}, e = {:#?}", var, eval_expr(expr.clone()));
     match (var, eval_expr(expr)) {
         (Expr::Var(v), ExprRep::Int(val)) => insert_var(ExprRep::Var(v), ExprRep::Int(val)),
         (Expr::Var(v), ExprRep::Bool(val)) => insert_var(ExprRep::Var(v), ExprRep::Bool(val)),
@@ -152,8 +150,8 @@ fn eval_bin_expr(l: Expr, op: Op, r: Expr) -> ExprRep {
             ExprRep::Bool(val) => eval_bool_expr(val, op, right),
             _ => ExprRep::Bool(right),
         },
-        (ExprRep::Null, _)=> eval_expr(r),
-        _ => panic!("Invalid bin expr!")
+        (ExprRep::Null, _) => eval_expr(r),
+        _ => panic!("Invalid bin expr!"),
     }
 }
 
@@ -247,11 +245,9 @@ fn var_ari_op(var: Expr, op: AriOp, expr: Expr) -> ExprRep {
 
 fn var_ass_op(var: Expr, ass_op: AssOp, expr: Expr) -> ExprRep {
     match ass_op {
-        AssOp::Eq => match (eval_expr(var), eval_expr(expr)) {
-            (ExprRep::Var(v), ExprRep::Int(val)) => insert_var(ExprRep::Var(v), ExprRep::Int(val)),
-            (ExprRep::Var(v), ExprRep::Bool(val)) => {
-                insert_var(ExprRep::Var(v), ExprRep::Bool(val))
-            }
+        AssOp::Eq => match (var, eval_expr(expr)) {
+            (Expr::Var(v), ExprRep::Int(val)) => insert_var(ExprRep::Var(v), ExprRep::Int(val)),
+            (Expr::Var(v), ExprRep::Bool(val)) => insert_var(ExprRep::Var(v), ExprRep::Bool(val)),
             _ => panic!("Var insert fail!"),
         },
         AssOp::AddEq => match (var.clone(), eval_expr(var), eval_expr(expr)) {
@@ -282,52 +278,11 @@ fn var_ass_op(var: Expr, ass_op: AssOp, expr: Expr) -> ExprRep {
 }
 
 fn var_log_op(var: Expr, log_op: LogOp, expr: Expr) -> ExprRep {
-
-    println!("v2 = {:#?}, e2 = {:#?}", var, expr); 
-    println!("v2 = {:#?}, e2 = {:#?}", eval_expr(var.clone()), eval_expr(expr.clone()));
     match (eval_expr(var), log_op, eval_expr(expr)) {
-        (ExprRep::Bool(b1), LogOp::And, ExprRep::Bool(b2)) => {
-            return ExprRep::Bool(b1 && b2)
-
-        },
-        (ExprRep::Bool(b1), LogOp::Or, ExprRep::Bool(b2)) => {
-            return ExprRep::Bool(b1 || b2)
-
-        },
-
-        // LogOp::And => match (var.clone(), eval_expr(var), eval_expr(expr)) {
-        //     (Expr::Var(v), ExprRep::Bool(old_val), ExprRep::Bool(new_val)) => {
-
-        //         let a = insert_var(ExprRep::Var(v.clone()), ExprRep::Bool(old_val && new_val));
-
-        //         println!("read from var = {:#?}", read_var(&v));
-        //         return a
-                
-        //     }
-        //     _ => panic!("Var And update fail!"),
-        // },
-        _ => panic!()
+        (ExprRep::Bool(b1), LogOp::And, ExprRep::Bool(b2)) => return ExprRep::Bool(b1 && b2),
+        (ExprRep::Bool(b1), LogOp::Or, ExprRep::Bool(b2)) => return ExprRep::Bool(b1 || b2),
+        _ => panic!(),
     }
-
-    // match log_op {
-    //     LogOp::And => match (var.clone(), eval_expr(var), eval_expr(expr)) {
-    //         (Expr::Var(v), ExprRep::Bool(old_val), ExprRep::Bool(new_val)) => {
-
-    //             let a = insert_var(ExprRep::Var(v.clone()), ExprRep::Bool(old_val && new_val));
-
-    //             println!("read from var = {:#?}", read_var(&v));
-    //             return a
-                
-    //         }
-    //         _ => panic!("Var And update fail!"),
-    //     },
-    //     LogOp::Or => match (var.clone(), eval_expr(var), eval_expr(expr)) {
-    //         (Expr::Var(v), ExprRep::Bool(old_val), ExprRep::Bool(new_val)) => {
-    //             insert_var(ExprRep::Var(v), ExprRep::Bool(old_val || new_val))
-    //         }
-    //         _ => panic!("Var Or update fail!"),
-    //     },
-    // }
 }
 
 fn var_rel_op(var: Expr, rel_op: RelOp, expr: Expr) -> ExprRep {

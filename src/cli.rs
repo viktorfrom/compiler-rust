@@ -6,7 +6,6 @@ use crate::type_checker::*;
 use crate::{interpreter::interpreter, llvm::*};
 use crate::{parser::*, program};
 
-
 #[derive(Debug, StructOpt)]
 #[structopt(
     name = "compiler",
@@ -34,21 +33,34 @@ pub fn cli() {
 
     let test = "
         fn testfn(a:bool, b:bool) -> bool {
-            let f:bool = a && b;
-            let a: bool = a || false;
-            return a
+            let f:bool = a && true;
+            let c: bool = f || false;
+            return c
         }
         return testfn(true, true)
     ";
-   let ast = match parser(test) {
-       Ok(res) => {res}
-       Err(e) => {panic!("Error: {:#}", e)}
-   };
+    let test2 = "
+        fn testfn3(d: bool, e: bool) -> i32 {
+            let f: bool = d && e;
+            let n: i32 = 1;
+            while f == true {
+                n += 1;
+                f = false;
+            };
+            return n;    
+        }";
+
+    let p = program();
+    let ast = match parser(&p) {
+        Ok(res) => res,
+        Err(e) => {
+            panic!("Error: {:#}", e)
+        }
+    };
 
     if opt.ast {
         println!("Tree = {:#?}", ast);
     }
-
 
     if opt.llvm {
         println!("llvm");

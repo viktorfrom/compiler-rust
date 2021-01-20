@@ -17,7 +17,7 @@ Clone the repository from git and compile the project using,
 ```
 cargo run -- 
 cargo run -- -l
-cargo run -- -l -t
+cargo run -- -l -a
 cargo run -- --help
 ```
 
