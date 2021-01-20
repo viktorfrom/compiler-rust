@@ -31,25 +31,6 @@ struct Opt {
 pub fn cli() {
     let opt = Opt::from_args();
 
-    let test = "
-        fn testfn(a:bool, b:bool) -> bool {
-            let f:bool = a && true;
-            let c: bool = f || false;
-            return c
-        }
-        return testfn(true, true)
-    ";
-    let test2 = "
-        fn testfn3(d: bool, e: bool) -> i32 {
-            let f: bool = d && e;
-            let n: i32 = 1;
-            while f == true {
-                n += 1;
-                f = false;
-            };
-            return n;    
-        }";
-
     let p = program();
     let ast = match parser(&p) {
         Ok(res) => res,
@@ -62,17 +43,17 @@ pub fn cli() {
         println!("Tree = {:#?}", ast);
     }
 
+    // if type_scope(tree.clone()) {
+    //     let res = interpreter(tree);
+    //     println!("eval = {:#?}", res);
+    // } else {
+    //     panic!("ERROR: Typechecker failed!");
+    // }
     if opt.llvm {
         println!("llvm");
     } else {
         println!("interpreter");
         let res = interpreter(ast.1);
         println!("res = {:#?}", res);
-        // if type_scope(tree.clone()) {
-        //     let res = interpreter(tree);
-        //     println!("eval = {:#?}", res);
-        // } else {
-        //     panic!("ERROR: Typechecker failed!");
-        // }
     }
 }
