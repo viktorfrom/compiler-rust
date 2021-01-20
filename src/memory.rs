@@ -6,7 +6,7 @@ use lazy_static;
 use std::sync::Mutex;
 #[derive(Debug, PartialEq, Clone)]
 pub enum ExprRep {
-    Int(&i32),
+    Int(i32),
     Var(String),
     Bool(bool),
 

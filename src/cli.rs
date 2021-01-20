@@ -35,7 +35,8 @@ pub fn cli() {
     let test = "
         fn testfn(a:bool, b:bool) -> bool {
             let f:bool = a && b;
-            return f
+            let a: bool = a || false;
+            return a
         }
         return testfn(true, true)
     ";
