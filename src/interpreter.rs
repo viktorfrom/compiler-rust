@@ -158,10 +158,10 @@ fn eval_bin_expr(l: Expr, op: Op, r: Expr) -> ExprRep {
 /// Updates existing value in memory
 fn eval_var_expr(var: Expr, op: Op, expr: Expr) -> ExprRep {
     match op {
-        Op::AriOp(op) => var_ari_op(var, op, expr),
+        Op::AriOp(_) => var_ari_op(var, op, expr),
         Op::AssOp(op) => var_ass_op(var, op, expr),
-        Op::LogOp(op) => var_log_op(var, op, expr),
-        Op::RelOp(op) => var_rel_op(var, op, expr),
+        Op::LogOp(_) => var_log_op(var, op, expr),
+        Op::RelOp(_) => var_rel_op(var, op, expr),
     }
 }
 
@@ -194,52 +194,17 @@ fn eval_bool_expr(l: bool, op: Op, r: bool) -> ExprRep {
     }
 }
 
-fn var_ari_op(var: Expr, op: AriOp, expr: Expr) -> ExprRep {
-    match op {
-        AriOp::Add => match (var, expr) {
-            (Expr::Var(v), Expr::Var(expr)) => match (read_var(&v), read_var(&expr)) {
-                (ExprRep::Int(v1), ExprRep::Int(v2)) => ExprRep::Int(v1 + v2),
-                _ => ExprRep::Null,
-            },
-            (Expr::Var(v), Expr::Int(expr)) => match read_var(&v) {
-                ExprRep::Int(v1) => ExprRep::Int(v1 + expr),
-                _ => ExprRep::Null,
-            },
-            _ => panic!("Var Add fail!"),
+fn var_ari_op(var: Expr, op: Op, expr: Expr) -> ExprRep {
+    match (var, op, expr) {
+        (Expr::Var(v), op, Expr::Var(expr)) => match (read_var(&v), read_var(&expr)) {
+            (ExprRep::Int(v1), ExprRep::Int(v2)) => eval_int_expr(v1, op, v2),
+            _ => panic!("Var(Int) Var(Int) op fail!"),
         },
-        AriOp::Sub => match (var, expr) {
-            (Expr::Var(v), Expr::Var(expr)) => match (read_var(&v), read_var(&expr)) {
-                (ExprRep::Int(v1), ExprRep::Int(v2)) => ExprRep::Int(v1 - v2),
-                _ => ExprRep::Null,
-            },
-            (Expr::Var(v), Expr::Int(expr)) => match read_var(&v) {
-                ExprRep::Int(v1) => ExprRep::Int(v1 - expr),
-                _ => ExprRep::Null,
-            },
-            _ => panic!("Var Sub fail!"),
+        (Expr::Var(v), op, Expr::Int(expr)) => match read_var(&v) {
+            ExprRep::Int(v1) => eval_int_expr(v1, op, expr),
+            _ => panic!("Var(Int) Int op fail!"),
         },
-        AriOp::Div => match (var, expr) {
-            (Expr::Var(v), Expr::Var(expr)) => match (read_var(&v), read_var(&expr)) {
-                (ExprRep::Int(v1), ExprRep::Int(v2)) => ExprRep::Int(v1 / v2),
-                _ => ExprRep::Null,
-            },
-            (Expr::Var(v), Expr::Int(expr)) => match read_var(&v) {
-                ExprRep::Int(v1) => ExprRep::Int(v1 / expr),
-                _ => ExprRep::Null,
-            },
-            _ => panic!("Var Div fail!"),
-        },
-        AriOp::Mul => match (var, expr) {
-            (Expr::Var(v), Expr::Var(expr)) => match (read_var(&v), read_var(&expr)) {
-                (ExprRep::Int(v1), ExprRep::Int(v2)) => ExprRep::Int(v1 * v2),
-                _ => ExprRep::Null,
-            },
-            (Expr::Var(v), Expr::Int(expr)) => match read_var(&v) {
-                ExprRep::Int(v1) => ExprRep::Int(v1 * expr),
-                _ => ExprRep::Null,
-            },
-            _ => panic!("Var Mul fail!"),
-        },
+        _ => panic!("Invalid Var Log op!"),
     }
 }
 
@@ -248,7 +213,7 @@ fn var_ass_op(var: Expr, ass_op: AssOp, expr: Expr) -> ExprRep {
         AssOp::Eq => match (var, eval_expr(expr)) {
             (Expr::Var(v), ExprRep::Int(val)) => insert_var(ExprRep::Var(v), ExprRep::Int(val)),
             (Expr::Var(v), ExprRep::Bool(val)) => insert_var(ExprRep::Var(v), ExprRep::Bool(val)),
-            _ => panic!("Var insert fail!"),
+            _ => panic!("Var update fail!"),
         },
         AssOp::AddEq => match (var.clone(), eval_expr(var), eval_expr(expr)) {
             (Expr::Var(v), ExprRep::Int(old_val), ExprRep::Int(new_val)) => {
@@ -277,76 +242,18 @@ fn var_ass_op(var: Expr, ass_op: AssOp, expr: Expr) -> ExprRep {
     }
 }
 
-fn var_log_op(var: Expr, log_op: LogOp, expr: Expr) -> ExprRep {
-    match (eval_expr(var), log_op, eval_expr(expr)) {
-        (ExprRep::Bool(b1), LogOp::And, ExprRep::Bool(b2)) => return ExprRep::Bool(b1 && b2),
-        (ExprRep::Bool(b1), LogOp::Or, ExprRep::Bool(b2)) => return ExprRep::Bool(b1 || b2),
-        _ => panic!(),
+fn var_log_op(var: Expr, op: Op, expr: Expr) -> ExprRep {
+    match (eval_expr(var), op, eval_expr(expr)) {
+        (ExprRep::Bool(b1), op, ExprRep::Bool(b2)) => eval_bool_expr(b1, op, b2),
+        _ => panic!("Invalid Var Log op!"),
     }
 }
 
-fn var_rel_op(var: Expr, rel_op: RelOp, expr: Expr) -> ExprRep {
-    match rel_op {
-        RelOp::Eq => match (var.clone(), eval_expr(var), eval_expr(expr)) {
-            (Expr::Var(_), ExprRep::Bool(b1), ExprRep::Bool(b2)) => {
-                if b1 == b2 {
-                    return ExprRep::Bool(true);
-                } else {
-                    return ExprRep::Bool(false);
-                }
-            }
-            _ => ExprRep::Null,
-        },
-        RelOp::Neq => match (var.clone(), eval_expr(var), eval_expr(expr)) {
-            (Expr::Var(_), ExprRep::Bool(b1), ExprRep::Bool(b2)) => {
-                if b1 != b2 {
-                    return ExprRep::Bool(true);
-                } else {
-                    return ExprRep::Bool(false);
-                }
-            }
-            _ => ExprRep::Null,
-        },
-        RelOp::Leq => match (var.clone(), eval_expr(var), eval_expr(expr)) {
-            (Expr::Var(_), ExprRep::Int(v1), ExprRep::Int(v2)) => {
-                if v1 <= v2 {
-                    return ExprRep::Bool(true);
-                } else {
-                    return ExprRep::Bool(false);
-                }
-            }
-            _ => ExprRep::Null,
-        },
-        RelOp::Geq => match (var.clone(), eval_expr(var), eval_expr(expr)) {
-            (Expr::Var(_), ExprRep::Int(v1), ExprRep::Int(v2)) => {
-                if v1 >= v2 {
-                    return ExprRep::Bool(true);
-                } else {
-                    return ExprRep::Bool(false);
-                }
-            }
-            _ => ExprRep::Null,
-        },
-        RelOp::Les => match (var.clone(), eval_expr(var), eval_expr(expr)) {
-            (Expr::Var(_), ExprRep::Int(v1), ExprRep::Int(v2)) => {
-                if v1 < v2 {
-                    return ExprRep::Bool(true);
-                } else {
-                    return ExprRep::Bool(false);
-                }
-            }
-            _ => ExprRep::Null,
-        },
-        RelOp::Gre => match (var.clone(), eval_expr(var), eval_expr(expr)) {
-            (Expr::Var(_), ExprRep::Int(v1), ExprRep::Int(v2)) => {
-                if v1 > v2 {
-                    return ExprRep::Bool(true);
-                } else {
-                    return ExprRep::Bool(false);
-                }
-            }
-            _ => ExprRep::Null,
-        },
+fn var_rel_op(var: Expr, op: Op, expr: Expr) -> ExprRep {
+    match (eval_expr(var), op, eval_expr(expr)) {
+        (ExprRep::Bool(b1), op, ExprRep::Bool(b2)) => eval_bool_expr(b1, op, b2),
+        (ExprRep::Int(b1), op, ExprRep::Int(b2)) => eval_int_expr(b1, op, b2),
+        _ => panic!("Invalid Var Log op!"),
     }
 }
 

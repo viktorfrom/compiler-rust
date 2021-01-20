@@ -28,10 +28,6 @@ lazy_static! {
         let f = HashMap::new();
         Mutex::new(f)
     };
-    static ref STACK: Mutex<Vec<ExprRep>> = {
-        let s = Vec::new();
-        Mutex::new(s)
-    };
 }
 
 pub fn insert_fn(var: ExprRep, func: ExprRep) -> ExprRep {
