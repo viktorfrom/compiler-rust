@@ -3,9 +3,9 @@ use core::panic;
 use crate::ast::*;
 use crate::memory::*;
 
-pub fn interpreter(tree: Vec<Expr>) -> ExprRep {
+pub fn interpreter(ast: Vec<Expr>) -> ExprRep {
     let mut res = ExprRep::Null;
-    for expr in tree.iter() {
+    for expr in ast.iter() {
         res = eval_expr(expr.clone());
         match res {
             _ => continue,
@@ -139,39 +139,19 @@ fn eval_return(expr: Expr) -> ExprRep {
 }
 
 fn eval_bin_expr(l: Expr, op: Op, r: Expr) -> ExprRep {
-    println!("l = {:#?}, expr = {:#?} ", l, r);
-    match (l.clone(), r.clone()) {
-        (Expr::Int(left), Expr::Int(right)) => eval_int_expr(left, op, right),
-        (Expr::Int(v), Expr::BinExpr(_, _, _)) => match eval_expr(r) {
-            ExprRep::Int(r) => eval_int_expr(v, op, r),
-            _ => ExprRep::Null,
-        },
-        (Expr::Var(v), Expr::Int(right)) => match read_var(&v) {
+    match (eval_expr(l), eval_expr(r.clone())) {
+        (ExprRep::Int(left), ExprRep::Int(right)) => eval_int_expr(left, op, right),
+        (ExprRep::Var(v), ExprRep::Int(right)) => match read_var(&v) {
             ExprRep::Int(val) => eval_int_expr(val, op, right),
             _ => ExprRep::Int(right),
         },
-        (Expr::Bool(left), Expr::Bool(right)) => eval_bool_expr(left, op, right),
-        (Expr::Bool(v), Expr::BinExpr(_, _, _)) => match eval_expr(r) {
-            ExprRep::Bool(r) => eval_bool_expr(v, op, r),
-            _ => ExprRep::Null,
-        },
-        (Expr::Var(v), Expr::Bool(right)) => match read_var(&v) {
+        (ExprRep::Bool(left), ExprRep::Bool(right)) => eval_bool_expr(left, op, right),
+        (ExprRep::Var(v), ExprRep::Bool(right)) => match read_var(&v) {
             ExprRep::Bool(val) => eval_bool_expr(val, op, right),
             _ => ExprRep::Bool(right),
         },
-        (Expr::Var(_), Expr::BinExpr(_, _, _)) => eval_expr(r),
-        (Expr::Var(_), Expr::FnCall(_, _)) => eval_expr(r),
-        (Expr::FnCall(_, _), Expr::BinExpr(_, _, _)) => match (eval_expr(l), eval_expr(r)) {
-            (ExprRep::Int(l), ExprRep::Int(r)) => eval_int_expr(l, op, r),
-            (ExprRep::Bool(l), ExprRep::Bool(r)) => eval_bool_expr(l, op, r),
-            _ => panic!("Invalid bin expr!"),
-        },
-        (Expr::FnCall(_, _), Expr::FnCall(_, _)) => match (eval_expr(l), eval_expr(r)) {
-            (ExprRep::Int(l), ExprRep::Int(r)) => eval_int_expr(l, op, r),
-            (ExprRep::Bool(l), ExprRep::Bool(r)) => eval_bool_expr(l, op, r),
-            _ => panic!("Invalid bin expr!"),
-        },
-        _ => panic!("Invalid bin expr!"),
+        (ExprRep::Null, _)=> eval_expr(r),
+        _ => panic!("Invalid bin expr!")
     }
 }
 

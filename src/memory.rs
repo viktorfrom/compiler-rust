@@ -28,6 +28,10 @@ lazy_static! {
         let f = HashMap::new();
         Mutex::new(f)
     };
+    static ref STACK: Mutex<Vec<ExprRep>> = {
+        let s = Vec::new();
+        Mutex::new(s)
+    };
 }
 
 pub fn insert_fn(var: ExprRep, func: ExprRep) -> ExprRep {
@@ -74,4 +78,31 @@ pub fn read_fn(key: &str) -> ExprRep {
             panic!("Could not find fn {:#?} in map", key)
         }
     }
+}
+
+pub fn push_on_return_stack(val: ExprRep) {
+    let mut stack = STACK.lock().unwrap();
+    // println!("stack = {:#?}", stack);
+    stack.push(val);
+}
+
+pub fn pop_from_return_stack() -> ExprRep {
+    let mut stack = STACK.lock().unwrap();
+    match stack.pop() {
+        Some(i) => i,
+        None => ExprRep::Null,
+    }
+}
+
+pub fn push_on_mem_stack() {
+    let mut stack = SCOPE.lock().unwrap();
+
+    stack.push(Mutex::new(HashMap::new()));
+}
+
+pub fn pop_from_mem_stack() {
+    let mut stack = SCOPE.lock().unwrap();
+    println!("SKOJJAR DU????+");
+
+    stack.pop();
 }

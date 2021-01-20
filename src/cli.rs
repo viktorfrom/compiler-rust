@@ -1,13 +1,11 @@
 use structopt::StructOpt;
 
-// use crate::interpreter::*;
+use crate::interpreter::*;
 use crate::program::*;
 use crate::type_checker::*;
 use crate::{interpreter::interpreter, llvm::*};
 use crate::{parser::*, program};
 
-use crate::ast::*;
-use crate::memory::*;
 
 #[derive(Debug, StructOpt)]
 #[structopt(
@@ -28,35 +26,34 @@ struct Opt {
     llvm: bool,
 
     #[structopt(short, long)]
-    tree: bool,
+    ast: bool,
 }
 
 pub fn cli() {
     let opt = Opt::from_args();
 
-    let tree = parser(
-        "
+    let test = "
+        fn testfn(a:bool, b:bool) -> bool {
+            let f:bool = a && b;
+            return f
+        }
+        return testfn(true, true)
+    ";
+   let ast = match parser(test) {
+       Ok(res) => {res}
+       Err(e) => {panic!("Error: {:#}", e)}
+   };
 
-        fn testfn1(a:i32) -> i32 {return a}
-        fn testfn2(c:i32) -> i32 {return c}
-        fn testfn3(c:i32) -> i32 {return c}
-        fn testfn4(c:i32) -> i32 {return c}
-        let b:i32 = testfn1(5) + testfn2(2) + testfn3(3) + testfn4(5)
-        return b
-        ",
-    )
-    .unwrap()
-    .1;
-
-    if opt.tree {
-        println!("Tree = {:#?}", tree);
+    if opt.ast {
+        println!("Tree = {:#?}", ast);
     }
+
 
     if opt.llvm {
         println!("llvm");
     } else {
         println!("interpreter");
-        let res = interpreter(tree);
+        let res = interpreter(ast.1);
         println!("res = {:#?}", res);
         // if type_scope(tree.clone()) {
         //     let res = interpreter(tree);
