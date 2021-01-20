@@ -159,7 +159,7 @@ fn eval_bin_expr(l: Expr, op: Op, r: Expr) -> ExprRep {
 fn eval_var_expr(var: Expr, op: Op, expr: Expr) -> ExprRep {
     match op {
         Op::AriOp(_) => var_ari_op(var, op, expr),
-        Op::AssOp(op) => var_ass_op(var, op, expr),
+        Op::AssOp(_) => var_ass_op(var, op, expr),
         Op::LogOp(_) => var_log_op(var, op, expr),
         Op::RelOp(_) => var_rel_op(var, op, expr),
     }
@@ -208,37 +208,31 @@ fn var_ari_op(var: Expr, op: Op, expr: Expr) -> ExprRep {
     }
 }
 
-fn var_ass_op(var: Expr, ass_op: AssOp, expr: Expr) -> ExprRep {
-    match ass_op {
-        AssOp::Eq => match (var, eval_expr(expr)) {
-            (Expr::Var(v), ExprRep::Int(val)) => insert_var(ExprRep::Var(v), ExprRep::Int(val)),
-            (Expr::Var(v), ExprRep::Bool(val)) => insert_var(ExprRep::Var(v), ExprRep::Bool(val)),
-            _ => panic!("Var update fail!"),
-        },
-        AssOp::AddEq => match (var.clone(), eval_expr(var), eval_expr(expr)) {
-            (Expr::Var(v), ExprRep::Int(old_val), ExprRep::Int(new_val)) => {
-                insert_var(ExprRep::Var(v.clone()), ExprRep::Int(old_val + new_val))
-            }
+fn var_ass_op(var: Expr, op: Op, expr: Expr) -> ExprRep {
+    match (var.clone(), op, eval_expr(expr)) {
+        (Expr::Var(v), Op::AssOp(AssOp::Eq), ExprRep::Int(val)) => {
+            insert_var(ExprRep::Var(v), ExprRep::Int(val))
+        }
+        (Expr::Var(v), Op::AssOp(AssOp::Eq), ExprRep::Bool(val)) => {
+            insert_var(ExprRep::Var(v), ExprRep::Bool(val))
+        }
+        (Expr::Var(v), Op::AssOp(AssOp::AddEq), ExprRep::Int(new_val)) => match eval_expr(var) {
+            ExprRep::Int(old_val) => insert_var(ExprRep::Var(v), ExprRep::Int(old_val + new_val)),
             _ => panic!("Var Add update fail!"),
         },
-        AssOp::SubEq => match (var.clone(), eval_expr(var), eval_expr(expr)) {
-            (Expr::Var(v), ExprRep::Int(old_val), ExprRep::Int(new_val)) => {
-                insert_var(ExprRep::Var(v), ExprRep::Int(old_val - new_val))
-            }
+        (Expr::Var(v), Op::AssOp(AssOp::SubEq), ExprRep::Int(new_val)) => match eval_expr(var) {
+            ExprRep::Int(old_val) => insert_var(ExprRep::Var(v), ExprRep::Int(old_val - new_val)),
             _ => panic!("Var Sub update fail!"),
         },
-        AssOp::DivEq => match (var.clone(), eval_expr(var), eval_expr(expr)) {
-            (Expr::Var(v), ExprRep::Int(old_val), ExprRep::Int(new_val)) => {
-                insert_var(ExprRep::Var(v), ExprRep::Int(old_val - new_val))
-            }
-            _ => panic!("Var Sub update fail!"),
+        (Expr::Var(v), Op::AssOp(AssOp::DivEq), ExprRep::Int(new_val)) => match eval_expr(var) {
+            ExprRep::Int(old_val) => insert_var(ExprRep::Var(v), ExprRep::Int(old_val / new_val)),
+            _ => panic!("Var Div update fail!"),
         },
-        AssOp::MulEq => match (var.clone(), eval_expr(var), eval_expr(expr)) {
-            (Expr::Var(v), ExprRep::Int(old_val), ExprRep::Int(new_val)) => {
-                insert_var(ExprRep::Var(v), ExprRep::Int(old_val - new_val))
-            }
-            _ => panic!("Var Sub update fail!"),
+        (Expr::Var(v), Op::AssOp(AssOp::MulEq), ExprRep::Int(new_val)) => match eval_expr(var) {
+            ExprRep::Int(old_val) => insert_var(ExprRep::Var(v), ExprRep::Int(old_val * new_val)),
+            _ => panic!("Var Mul update fail!"),
         },
+            _ => panic!("Var update fail!"),
     }
 }
 
