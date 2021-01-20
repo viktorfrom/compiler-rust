@@ -1,5 +1,3 @@
-use core::panic;
-
 use crate::ast::*;
 use crate::memory::*;
 

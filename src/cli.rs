@@ -40,20 +40,17 @@ pub fn cli() {
     };
 
     if opt.ast {
-        println!("Tree = {:#?}", ast);
+        println!("ast = {:#?}", ast);
     }
 
-    // if type_scope(tree.clone()) {
-    //     let res = interpreter(tree);
-    //     println!("eval = {:#?}", res);
-    // } else {
-    //     panic!("ERROR: Typechecker failed!");
-    // }
-    if opt.llvm {
-        println!("llvm");
+    if type_checker(ast.clone().1) {
+        if opt.llvm {
+            println!("llvm: ");
+        } else {
+            let res = interpreter(ast.1);
+            println!("interp:  {:#?}", res);
+        }
     } else {
-        println!("interpreter");
-        let res = interpreter(ast.1);
-        println!("res = {:#?}", res);
+        panic!("ERROR: Typechecker failed!");
     }
 }

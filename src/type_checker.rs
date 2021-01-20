@@ -1,269 +1,267 @@
-// use crate::ast::content_tree::*;
-// use crate::ast::expr_tree::*;
-// use crate::memory::*;
+use crate::ast::*;
+use crate::memory::*;
 
-// pub fn type_scope(scope: Vec<Expr>) -> bool {
-//     let mut res = Vec::new();
-//     for expr in scope.iter() {
-//         res.push(type_expr(expr.clone()));
+pub fn type_checker(ast: Vec<Expr>) -> bool {
+    let mut res = Vec::new();
+    for expr in ast.iter() {
+        res.push(type_expr(expr.clone()));
 
-//         match res {
-//             _ => continue,
-//         }
-//     }
+        match res {
+            _ => continue,
+        }
+    }
 
-//     if res.is_empty() {
-//         return false;
-//     }
+    if res.is_empty() {
+        return false;
+    }
 
-//     return true;
-// }
+    return true;
+}
 
-// fn type_expr(input: Expr) -> Content {
-//     match input {
-//         Expr::Num(_) => Content::Num(0),
-//         Expr::Bool(_) => Content::Bool(false),
-//         Expr::Str(s) => Content::Str(s),
+fn type_interp(ast: Vec<Expr>) -> ExprRep {
+    let mut res = ExprRep::Null;
+    for expr in ast.iter() {
+        res = type_expr(expr.clone());
+        match res {
+            _ => continue,
+        }
+    }
+    return res;
+}
 
-//         Expr::ArithOp(op) => match op {
-//             ArithOp::Add => Content::ContentOp(ContentOp::Add),
-//             ArithOp::Sub => Content::ContentOp(ContentOp::Sub),
-//             ArithOp::Mult => Content::ContentOp(ContentOp::Mult),
-//             ArithOp::Div => Content::ContentOp(ContentOp::Div),
-//         },
+fn type_expr(expr: Expr) -> ExprRep {
+    match expr {
+        Expr::Int(_) => ExprRep::Int(0),
+        Expr::Bool(_) => ExprRep::Bool(false),
+        Expr::Var(n) => read_var(&n),
 
-//         Expr::LogicOp(op) => match op {
-//             LogicOp::And => Content::ContentOp(ContentOp::And),
-//             LogicOp::Or => Content::ContentOp(ContentOp::Or),
-//             LogicOp::Not => Content::ContentOp(ContentOp::Not),
-//         },
+        Expr::BinExpr(l, op, r) => type_bin_expr(*l, op, *r),
+        Expr::VarExpr(var, op, expr) => type_var_expr(*var, op, *expr),
 
-//         Expr::RelOp(op) => match op {
-//             RelOp::EqEq => Content::ContentOp(ContentOp::EqEq),
-//             RelOp::NotEq => Content::ContentOp(ContentOp::NotEq),
-//             RelOp::LesEq => Content::ContentOp(ContentOp::LesEq),
-//             RelOp::GreEq => Content::ContentOp(ContentOp::GreEq),
-//             RelOp::Les => Content::ContentOp(ContentOp::Les),
-//             RelOp::Gre => Content::ContentOp(ContentOp::Gre),
-//         },
+        Expr::Let(var, var_type, expr) => type_let(*var, var_type, *expr),
 
-//         Expr::Type(op) => match op {
-//             Type::Integer => Content::ContentOp(ContentOp::Integer),
-//             Type::Bool => Content::ContentOp(ContentOp::Bool),
-//             Type::Str => Content::ContentOp(ContentOp::Str),
-//             Type::Void => Content::ContentOp(ContentOp::Void),
-//         },
+        Expr::If(cond, block) => type_if(*cond, block),
+        Expr::IfElse(cond, block1, block2) => type_if_else(*cond, block1, block2),
+        Expr::While(cond, block) => type_while(*cond, block),
 
-//         Expr::Return(return_param, var) => match *var {
-//             Expr::Str(var) => type_return(&return_param, &var.to_string()),
-//             Expr::Num(var) => Content::Return(return_param, Box::new(Content::Num(var))),
-//             Expr::Bool(var) => Content::Return(return_param, Box::new(Content::Bool(var))),
-//             _ => panic!("Invalid Input!"),
-//         },
+        Expr::Fn(fn_var, params, ret_type, block) => type_fn(*fn_var, params, ret_type, block),
+        Expr::FnCall(fn_var, args) => type_fn_call(*fn_var, args),
+        Expr::Return(expr) => type_return(*expr),
+    }
+}
 
-//         Expr::Func(func_name, params, block) => type_func(type_expr(*func_name), params, block),
+fn type_fn(fn_var: Expr, params: Vec<(Expr, Type)>, ret_type: Type, block: Vec<Expr>) -> ExprRep {
+    match fn_var {
+        Expr::Var(a) => {
+            insert_fn(
+                ExprRep::Var(a.to_string()),
+                ExprRep::Fn(params, ret_type, block),
+            );
+        }
+        _ => panic!("Fn stmt fail!"),
+    }
+    return ExprRep::Null;
+}
 
-//         Expr::While(_while_param, var, block) => type_if_while(type_expr(*var), block),
-//         Expr::If(if_param, block) => type_if_while(type_expr(*if_param), block),
+fn type_fn_call(fn_var: Expr, args: Vec<Expr>) -> ExprRep {
+    match fn_var {
+        Expr::Var(fn_var) => match read_fn(&fn_var) {
+            ExprRep::Fn(params, ret_type, block) => {
+                if params.len() != args.clone().len() {
+                    panic!("params != args")
+                }
 
-//         Expr::Param(param, _param_type) => match *param {
-//             Expr::Str(param) => {
-//                 insert_var(Content::Str(param.clone()), Content::Str(param.clone()))
-//             }
-//             _ => panic!("Invalid Input!"),
-//         },
+                for i in 0..params.len() {
+                    for x in params.clone() {
+                        match &x {
+                            (Expr::Var(v), t) => {
+                                let type_arg = type_expr(args[i].clone());
+                                match (t, type_arg.clone()) {
+                                    (Type::Int, ExprRep::Int(_)) => {
+                                        insert_var(ExprRep::Var(v.to_string()), type_arg)
+                                    }
+                                    (Type::Bool, ExprRep::Bool(_)) => {
+                                        insert_var(ExprRep::Var(v.to_string()), type_arg)
+                                    }
+                                    _ => panic!("Return type does not match!"),
+                                };
+                            }
+                            _ => panic!("Invalid param var!"),
+                        }
+                    }
+                }
 
-//         Expr::FuncInput(var, func_name, block) => match *func_name {
-//             Expr::Str(func_name) => type_func_input(type_expr(*var), &func_name.to_string(), block),
-//             _ => panic!("Invalid Input!"),
-//         },
+                let res = type_interp(block);
+                match (ret_type, res.clone()) {
+                    (Type::Int, ExprRep::Int(_)) => res,
+                    (Type::Bool, ExprRep::Bool(_)) => res,
+                    _ => panic!("Return type does not match!"),
+                }
+            }
+            _ => panic!("Could not find fn_var in map!"),
+        },
+        _ => panic!("Invalid fn_var!"),
+    }
+}
 
-//         Expr::Let(left, operator, right) => match *left {
-//             Expr::Num(left) => type_i32(
-//                 type_expr(Expr::Num(left)),
-//                 type_expr(*operator),
-//                 type_expr(*right),
-//             ),
-//             Expr::Bool(left) => type_bool(
-//                 type_expr(Expr::Bool(left)),
-//                 type_expr(*operator),
-//                 type_expr(*right),
-//             ),
-//             Expr::Str(left) => type_let(
-//                 type_expr(Expr::Str(left)),
-//                 type_expr(*operator),
-//                 type_expr(*right),
-//             ),
-//             _ => (panic!("Invalid input!")),
-//         },
+fn type_if(cond: Expr, block: Vec<Expr>) -> ExprRep {
+    match type_expr(cond) {
+        ExprRep::Bool(c) => {
+            if c {
+                return type_interp(block);
+            }
+            return ExprRep::Null;
+        }
+        _ => panic!("If stmt fail!"),
+    }
+}
 
-//         _ => (panic!("Invalid input!")),
-//     }
-// }
+fn type_if_else(cond: Expr, block1: Vec<Expr>, block2: Vec<Expr>) -> ExprRep {
+    match type_expr(cond) {
+        ExprRep::Bool(c) => {
+            if c {
+                return type_interp(block1);
+            } else {
+                return type_interp(block2);
+            }
+        }
+        _ => panic!("IfElse stmt fail!"),
+    }
+}
 
-// fn type_if_while(if_param: Content, block: Vec<Expr>) -> Content {
-//     match if_param {
-//         Content::Bool(true) => type_block(block),
-//         Content::Bool(false) => Content::Null,
-//         Content::Str(s) => match read_var(&s.to_string()) {
-//             Content::Bool(true) => type_block(block),
-//             _ => Content::Null,
-//         },
-//         _ => (panic!("Invalid input!")),
-//     }
-// }
+fn type_while(cond: Expr, block: Vec<Expr>) -> ExprRep {
+    match type_expr(cond) {
+        ExprRep::Bool(c) => {
+            if c {
+                return type_interp(block);
+            }
+            return ExprRep::Null;
+        }
+        _ => panic!("While stmt fail!"),
+    }
+}
 
-// fn type_params(params: Vec<Expr>, args: Vec<Expr>) {
-//     if params.len() != args.len() {
-//         panic!(
-//             "ERROR: Wrong amount of arguments. Expected {} found {}",
-//             params.len(),
-//             args.len()
-//         );
-//     }
+fn type_let(var: Expr, _var_type: Type, expr: Expr) -> ExprRep {
+    match (var, type_expr(expr)) {
+        (Expr::Var(v), ExprRep::Int(val)) => insert_var(ExprRep::Var(v), ExprRep::Int(val)),
+        (Expr::Var(v), ExprRep::Bool(val)) => insert_var(ExprRep::Var(v), ExprRep::Bool(val)),
+        _ => panic!("Invalid let expr!"),
+    }
+}
 
-//     for i in 0..params.len() {
-//         let name;
+fn type_return(expr: Expr) -> ExprRep {
+    return type_expr(expr);
+}
 
-//         match &params[i] {
-//             Expr::Param(n, _t) => {
-//                 match &**n {
-//                     Expr::Str(na) => name = Content::Str(na.to_string()),
-//                     _ => panic!("ERROR: Value is not a variable"),
-//                 };
-//             }
-//             _ => panic!("ERROR: Value is not a parameter"),
-//         }
+fn type_bin_expr(l: Expr, op: Op, r: Expr) -> ExprRep {
+    match (type_expr(l), type_expr(r.clone())) {
+        (ExprRep::Int(left), ExprRep::Int(right)) => type_int_expr(left, op, right),
+        (ExprRep::Var(v), ExprRep::Int(right)) => match read_var(&v) {
+            ExprRep::Int(val) => type_int_expr(val, op, right),
+            _ => ExprRep::Int(right),
+        },
+        (ExprRep::Bool(left), ExprRep::Bool(right)) => type_bool_expr(left, op, right),
+        (ExprRep::Var(v), ExprRep::Bool(right)) => match read_var(&v) {
+            ExprRep::Bool(val) => type_bool_expr(val, op, right),
+            _ => ExprRep::Bool(right),
+        },
+        (ExprRep::Null, _) => type_expr(r),
+        _ => panic!("Invalid bin expr!"),
+    }
+}
 
-//         insert_var(name, type_expr(args[i].clone()));
-//     }
-// }
+/// Updates existing value in memory
+fn type_var_expr(var: Expr, op: Op, expr: Expr) -> ExprRep {
+    match op {
+        Op::AriOp(_) => var_ari_op(var, op, expr),
+        Op::AssOp(_) => var_ass_op(var, op, expr),
+        Op::LogOp(_) => var_log_op(var, op, expr),
+        Op::RelOp(_) => var_rel_op(var, op, expr),
+    }
+}
 
-// fn type_func(func_name: Content, params: Vec<Expr>, block: Vec<Expr>) -> Content {
-//     let v = vec![params, block];
-//     insert_function(func_name, v);
+fn type_int_expr(l: i32, op: Op, r: i32) -> ExprRep {
+    match op {
+        Op::AriOp(AriOp::Add) => ExprRep::Int(l + r),
+        Op::AriOp(AriOp::Sub) => ExprRep::Int(l - r),
+        Op::AriOp(AriOp::Div) => ExprRep::Int(l / r),
+        Op::AriOp(AriOp::Mul) => ExprRep::Int(l * r),
+        Op::RelOp(RelOp::Eq) => ExprRep::Bool(l == r),
+        Op::RelOp(RelOp::Neq) => ExprRep::Bool(l != r),
+        Op::RelOp(RelOp::Leq) => ExprRep::Bool(l <= r),
+        Op::RelOp(RelOp::Geq) => ExprRep::Bool(l >= r),
+        Op::RelOp(RelOp::Les) => ExprRep::Bool(l < r),
+        Op::RelOp(RelOp::Gre) => ExprRep::Bool(l > r),
+        _ => panic!("Invalid Int expr!"),
+    }
+}
+fn type_bool_expr(l: bool, op: Op, r: bool) -> ExprRep {
+    match op {
+        Op::LogOp(LogOp::And) => ExprRep::Bool(l && r),
+        Op::LogOp(LogOp::Or) => ExprRep::Bool(l || r),
+        Op::RelOp(RelOp::Eq) => ExprRep::Bool(l == r),
+        Op::RelOp(RelOp::Neq) => ExprRep::Bool(l != r),
+        Op::RelOp(RelOp::Leq) => ExprRep::Bool(l <= r),
+        Op::RelOp(RelOp::Geq) => ExprRep::Bool(l >= r),
+        Op::RelOp(RelOp::Les) => ExprRep::Bool(l < r),
+        Op::RelOp(RelOp::Gre) => ExprRep::Bool(l > r),
+        _ => panic!("Invalid Bool expr!"),
+    }
+}
 
-//     return Content::Null;
-// }
+fn var_ari_op(var: Expr, op: Op, expr: Expr) -> ExprRep {
+    match (var, op, expr) {
+        (Expr::Var(v), op, Expr::Var(expr)) => match (read_var(&v), read_var(&expr)) {
+            (ExprRep::Int(v1), ExprRep::Int(v2)) => type_int_expr(v1, op, v2),
+            _ => panic!("Var(Int) Var(Int) op fail!"),
+        },
+        (Expr::Var(v), op, Expr::Int(expr)) => match read_var(&v) {
+            ExprRep::Int(v1) => type_int_expr(v1, op, expr),
+            _ => panic!("Var(Int) Int op fail!"),
+        },
+        _ => panic!("Invalid Var Log op!"),
+    }
+}
 
-// fn type_func_input(var: Content, func_name: &str, args: Vec<Expr>) -> Content {
-//     let func_content = read_from_func(func_name).1;
-//     let params = func_content[0].clone();
-//     let block = func_content[1].clone();
+fn var_ass_op(var: Expr, op: Op, expr: Expr) -> ExprRep {
+    match (var.clone(), op, type_expr(expr)) {
+        (Expr::Var(v), Op::AssOp(AssOp::Eq), ExprRep::Int(val)) => {
+            insert_var(ExprRep::Var(v), ExprRep::Int(val))
+        }
+        (Expr::Var(v), Op::AssOp(AssOp::Eq), ExprRep::Bool(val)) => {
+            insert_var(ExprRep::Var(v), ExprRep::Bool(val))
+        }
+        (Expr::Var(v), Op::AssOp(AssOp::AddEq), ExprRep::Int(new_val)) => match type_expr(var) {
+            ExprRep::Int(old_val) => insert_var(ExprRep::Var(v), ExprRep::Int(old_val + new_val)),
+            _ => panic!("Var Add update fail!"),
+        },
+        (Expr::Var(v), Op::AssOp(AssOp::SubEq), ExprRep::Int(new_val)) => match type_expr(var) {
+            ExprRep::Int(old_val) => insert_var(ExprRep::Var(v), ExprRep::Int(old_val - new_val)),
+            _ => panic!("Var Sub update fail!"),
+        },
+        (Expr::Var(v), Op::AssOp(AssOp::DivEq), ExprRep::Int(new_val)) => match type_expr(var) {
+            ExprRep::Int(old_val) => insert_var(ExprRep::Var(v), ExprRep::Int(old_val / new_val)),
+            _ => panic!("Var Div update fail!"),
+        },
+        (Expr::Var(v), Op::AssOp(AssOp::MulEq), ExprRep::Int(new_val)) => match type_expr(var) {
+            ExprRep::Int(old_val) => insert_var(ExprRep::Var(v), ExprRep::Int(old_val * new_val)),
+            _ => panic!("Var Mul update fail!"),
+        },
+        _ => panic!("Var update fail!"),
+    }
+}
 
-//     type_params(params, args);
-//     let result = type_block(block);
-//     let var_name = match var {
-//         Content::Str(var) => var,
-//         _ => panic!("Error: Could not match str from var '{:?}'", var),
-//     };
+fn var_log_op(var: Expr, op: Op, expr: Expr) -> ExprRep {
+    match (type_expr(var), op, type_expr(expr)) {
+        (ExprRep::Bool(b1), op, ExprRep::Bool(b2)) => type_bool_expr(b1, op, b2),
+        _ => panic!("Invalid Var Log op!"),
+    }
+}
 
-//     let _value = match result {
-//         // Content::Return(_, var) => var,
-//         // _ => panic!("Error: Invalid block input!"),
-//         _ => (),
-//     };
-
-//     return Content::Return(var_name.to_string(), Box::new(Content::Num(0)));
-// }
-
-// fn type_return(return_param: &str, var: &str) -> Content {
-//     insert_var(
-//         Content::Str(return_param.to_string()),
-//         Content::Str(var.to_string()),
-//     );
-
-//     let value = read_var(var);
-//     return Content::Return(var.to_string(), Box::new(value));
-// }
-
-// fn type_block(block: Vec<Expr>) -> Content {
-//     let mut res: Content = Content::Null;
-//     for expr in block.iter() {
-//         res = type_expr(expr.clone());
-//         match res {
-//             Content::Return(_, _) => break,
-//             _ => continue,
-//         }
-//     }
-//     return res;
-// }
-
-// fn type_i32(left: Content, operator: Content, right: Content) -> Content {
-//     match (left, operator, right) {
-//         (Content::Num(left), Content::ContentOp(ContentOp::Add), Content::Num(right)) => {
-//             Content::Num(left + right)
-//         }
-//         (Content::Num(left), Content::ContentOp(ContentOp::Sub), Content::Num(right)) => {
-//             Content::Num(left - right)
-//         }
-//         (Content::Num(left), Content::ContentOp(ContentOp::Div), Content::Num(right)) => {
-//             Content::Num(left / right)
-//         }
-//         (Content::Num(left), Content::ContentOp(ContentOp::Mult), Content::Num(right)) => {
-//             Content::Num(left * right)
-//         }
-//         _ => (panic!("Invalid input!")),
-//     }
-// }
-
-// fn type_bool(left: Content, operator: Content, right: Content) -> Content {
-//     match (left, operator, right) {
-//         (Content::Bool(left), Content::ContentOp(ContentOp::And), Content::Bool(right)) => {
-//             Content::Bool(left && right)
-//         }
-//         (Content::Bool(left), Content::ContentOp(ContentOp::Or), Content::Bool(right)) => {
-//             Content::Bool(left || right)
-//         }
-//         _ => (panic!("Invalid input!")),
-//     }
-// }
-
-// fn type_let(left: Content, operator: Content, right: Content) -> Content {
-//     match (left, operator, right) {
-//         (Content::Str(left), Content::ContentOp(ContentOp::Integer), Content::Num(right)) => {
-//             insert_var(Content::Str(left), Content::Num(right))
-//         }
-//         (Content::Str(left), Content::ContentOp(ContentOp::Integer), Content::Str(right)) => {
-//             insert_var(Content::Str(left), read_var(&right.to_string()))
-//         }
-//         (Content::Str(left), Content::ContentOp(ContentOp::Bool), right) => {
-//             insert_var(Content::Str(left), right)
-//         }
-//         (Content::Str(left), Content::ContentOp(ContentOp::Str), right) => {
-//             insert_var(Content::Str(left), right)
-//         }
-//         _ => (panic!("Invalid input!")),
-//     }
-// }
-
-// #[cfg(test)]
-// mod interp_tests {
-//     use super::*;
-
-//     #[test]
-//     fn test_interp() {
-//         assert_eq!(type_expr(Expr::Num(1)), Content::Num(0));
-//         assert_eq!(type_expr(Expr::Bool(true)), Content::Bool(false));
-//     }
-
-//     #[test]
-//     fn test_interp_node() {
-//         assert_eq!(
-//             type_expr(Expr::Let(
-//                 Box::new(Expr::Num(2)),
-//                 Box::new(Expr::ArithOp(ArithOp::Mult)),
-//                 Box::new(Expr::Num(3))
-//             )),
-//             Content::Num(0)
-//         );
-//         assert_eq!(
-//             type_expr(Expr::Let(
-//                 Box::new(Expr::Bool(true)),
-//                 Box::new(Expr::LogicOp(LogicOp::And)),
-//                 Box::new(Expr::Bool(true))
-//             )),
-//             Content::Bool(false)
-//         );
-//     }
-// }
+fn var_rel_op(var: Expr, op: Op, expr: Expr) -> ExprRep {
+    match (type_expr(var), op, type_expr(expr)) {
+        (ExprRep::Bool(b1), op, ExprRep::Bool(b2)) => type_bool_expr(b1, op, b2),
+        (ExprRep::Int(b1), op, ExprRep::Int(b2)) => type_int_expr(b1, op, b2),
+        _ => panic!("Invalid Var Log op!"),
+    }
+}
