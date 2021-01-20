@@ -31,8 +31,6 @@ pub fn program() -> String {
             return g + h
         }
 
-        return main()
-
         "
     .to_string();
 

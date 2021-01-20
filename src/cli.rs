@@ -1,10 +1,10 @@
 use structopt::StructOpt;
 
-use crate::interpreter::*;
+use crate::ast::*;
+use crate::parser::*;
 use crate::program::*;
 use crate::type_checker::*;
 use crate::{interpreter::interpreter, llvm::*};
-use crate::{parser::*, program};
 
 #[derive(Debug, StructOpt)]
 #[structopt(
@@ -13,7 +13,7 @@ use crate::{parser::*, program};
 execute examples:
 cargo run -- 
 cargo run -- -l
-cargo run -- -l -t
+cargo run -- -l -a
 cargo run -- --help
 "
 )]
@@ -32,7 +32,7 @@ pub fn cli() {
     let opt = Opt::from_args();
 
     let p = program();
-    let ast = match parser(&p) {
+    let mut ast = match parser(&p) {
         Ok(res) => res,
         Err(e) => {
             panic!("Error: {:#}", e)
@@ -47,6 +47,11 @@ pub fn cli() {
         if opt.llvm {
             println!("llvm: ");
         } else {
+            ast.1.push(Expr::Return(Box::new(Expr::FnCall(
+                Box::new(Expr::Var("main".to_string())),
+                vec![],
+            ))));
+
             let res = interpreter(ast.1);
             println!("interp:  {:#?}", res);
         }
