@@ -1,9 +1,9 @@
 use structopt::StructOpt;
 
-use crate::ast::*;
 use crate::parser::*;
 use crate::program::*;
 use crate::type_checker::*;
+use crate::{ast::*, llvm};
 use crate::{interpreter::interpreter, llvm::*};
 
 #[derive(Debug, StructOpt)]
@@ -45,7 +45,8 @@ pub fn cli() {
 
     if type_checker(ast.clone().1) {
         if opt.llvm {
-            println!("llvm: ");
+            let res = llvm(ast.1);
+            println!("llvm: {:#?}", res);
         } else {
             ast.1.push(Expr::Return(Box::new(Expr::FnCall(
                 Box::new(Expr::Var("main".to_string())),
