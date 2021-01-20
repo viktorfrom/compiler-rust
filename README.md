@@ -13,12 +13,12 @@ cargo test
 
 ### Usage
 Clone the repository from git and compile the project using,
+
 ```
-cargo build
-```
-or simply run,
-```
-cargo run
+cargo run -- 
+cargo run -- -l
+cargo run -- -l -a
+cargo run -- --help
 ```
 
 ## Authors
