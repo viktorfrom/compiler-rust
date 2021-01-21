@@ -65,40 +65,45 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
         }
     }
 
-    fn create_entry_block_alloca(&mut self, name: &str) -> PointerValue<'ctx> {
+    fn create_entry_block_alloca(&mut self, name: &str, var_type: bool) -> PointerValue<'ctx> {
         let builder = self.context.create_builder();
         let entry = self.fn_value().get_first_basic_block().unwrap();
         match entry.get_first_instruction() {
             Some(first_instr) => builder.position_before(&first_instr),
             None => builder.position_at_end(entry),
         }
+        let alloca: PointerValue;
 
-        let alloca = builder.build_alloca(self.context.i32_type(), name);
+        if var_type {
+            alloca = builder.build_alloca(self.context.bool_type(), name);
+        } else {
+            alloca = builder.build_alloca(self.context.i32_type(), name);
+        }
+
         self.variables.insert(name.to_string(), alloca);
         alloca
     }
 
     fn compile_expr(&mut self, expr: &Expr) -> (InstructionValue<'ctx>, bool) {
         match expr.clone() {
-            Expr::Let(left, _, right) => match *left {
+            Expr::Let(left, var_type, right) => match *left {
                 Expr::Var(left) => {
-                    let alloca = self.create_entry_block_alloca(&left);
-                    let expr = self.compile_stmt(*right);
-                    let store = self.builder.build_store(alloca, expr);
+                    let ptr_val = match var_type {
+                        Type::Int => self.create_entry_block_alloca(&left, false),
+                        Type::Bool => self.create_entry_block_alloca(&left, true),
+                        _ => panic!("Invalid Let expr type!"),
+                    };
+                    let val = self.compile_stmt(*right);
+                    let store = self.builder.build_store(ptr_val, val);
 
                     (store, false)
                 }
                 _ => panic!("Invalid Expr!"),
             },
-            Expr::VarExpr(var, op, expr) => (self.compile_var_op(*var, op, *expr), false),
-            // Expr::VarOp(var, op, expr) => (self.compile_var_op(*var, op, *expr), false),
+            Expr::VarExpr(var, op, expr) => (self.compile_var_expr(*var, op, *expr), false),
             // Expr::If(cond, block) => (self.compile_if(*cond, block), false),
+            // Expr::IfElse(cond, block1, block2) => (self.compile_if_else(*cond, block1, block2), false),
             // Expr::While(cond, block) => (self.compile_while(*cond, block), false),
-            // Expr::Return(expr) => {
-            //     let val = self.compile_expr(*expr);
-            //     (self.builder.build_return(Some(&val)), true)
-            // }
-            // Expr::FuncCall(_) => (self.compile_expr(keyword).as_instruction().unwrap(), false),
             Expr::Return(expr) => {
                 let var = self.compile_stmt(*expr);
                 (self.builder.build_return(Some(&var)), true)
@@ -110,12 +115,14 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
 
     fn compile_stmt(&mut self, expr: Expr) -> IntValue<'ctx> {
         match expr.clone() {
+            Expr::Int(i) => self.compile_int(i),
+            Expr::Bool(b) => self.compile_bool(b),
             Expr::Var(var) => {
                 if var != "" {
                     let val = self.get_variable(&var);
                     self.builder.build_load(*val, &var).into_int_value()
                 } else {
-                    let alloca = self.create_entry_block_alloca("empty");
+                    let alloca = self.create_entry_block_alloca("empty", false);
                     let val = self.compile_stmt(Expr::Int(0));
                     self.builder.build_store(alloca, val);
 
@@ -123,20 +130,22 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
                     self.builder.build_load(*ptr_val, &var).into_int_value()
                 }
             }
-            Expr::Int(i) => self.compile_int(i),
-            Expr::Bool(b) => self.compile_bool(b),
-
             Expr::BinExpr(l, op, r) => self.compile_bin_expr(*l, op, *r),
-
-            _ => panic!("invalid compile stmt!"),
+            // Expr::FuncCall(_) => (self.compile_expr(keyword).as_instruction().unwrap(), false),
+            _ => panic!("Invalid compile stmt!"),
         }
     }
 
-    fn compile_var_op(&mut self, var: Expr, op: Op, expr: Expr) -> InstructionValue<'ctx> {
+    fn compile_var_expr(&mut self, var: Expr, op: Op, expr: Expr) -> InstructionValue<'ctx> {
         let val = self.compile_stmt(expr.clone());
 
         match (var, op, expr) {
             (Expr::Var(v), Op::AssOp(AssOp::Eq), Expr::Int(_)) => {
+                let var_ptr = self.get_variable(&v);
+
+                self.builder.build_store(*var_ptr, val)
+            }
+            (Expr::Var(v), Op::AssOp(AssOp::Eq), Expr::Bool(_)) => {
                 let var_ptr = self.get_variable(&v);
 
                 self.builder.build_store(*var_ptr, val)
@@ -147,22 +156,36 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
     }
 
     fn compile_bin_expr(&mut self, l: Expr, op: Op, r: Expr) -> IntValue<'ctx> {
+        // println!("var = {:#?}, op = {:#?}, expr = {:#?}, ", l, op, r);
         match (l.clone(), r.clone()) {
             (Expr::Int(_), Expr::Int(_)) => {
                 let left = self.compile_stmt(l);
                 let right = self.compile_stmt(r);
                 self.compile_int_expr(left, op, right)
             }
-            (Expr::Var(_), Expr::Int(_)) => {
-                return self.compile_stmt(r);
+            (Expr::Var(v), Expr::Int(_)) => {
+                if v != "" {
+                    let left = self.compile_stmt(l);
+                    let right = self.compile_stmt(r);
+                    self.compile_int_expr(left, op, right)
+                } else {
+                    return self.compile_stmt(r);
+                }
             }
             (Expr::Bool(_), Expr::Bool(_)) => {
                 let left = self.compile_stmt(l);
                 let right = self.compile_stmt(r);
                 self.compile_bool_expr(left, op, right)
             }
-            (Expr::Var(_), Expr::Bool(_)) => {
-                return self.compile_stmt(r);
+            (Expr::Var(v), Expr::Bool(_)) => {
+                if v != "" {
+                    let left = self.compile_stmt(l);
+                    let right = self.compile_stmt(r);
+                    self.compile_bool_expr(left, op, right)
+                } else {
+                    let a = self.compile_stmt(r);
+                    return a;
+                }
             }
             (_, Expr::BinExpr(_, _, _)) => self.compile_stmt(r),
             _ => panic!("Invalid Bin expr!"),
@@ -179,7 +202,9 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
             Op::LogOp(LogOp::And) => self.builder.build_and(l, r, "and"),
             Op::LogOp(LogOp::Or) => self.builder.build_or(l, r, "or"),
             Op::RelOp(RelOp::Eq) => self.builder.build_int_compare(IntPredicate::EQ, l, r, "Eq"),
-            Op::RelOp(RelOp::Neq) => self.builder.build_int_compare(IntPredicate::NE, l, r, "Neq"),
+            Op::RelOp(RelOp::Neq) => self
+                .builder
+                .build_int_compare(IntPredicate::NE, l, r, "Neq"),
             Op::RelOp(RelOp::Leq) => self
                 .builder
                 .build_int_compare(IntPredicate::SLE, l, r, "Leq"),
@@ -203,7 +228,9 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
             Op::AriOp(AriOp::Div) => self.builder.build_int_unsigned_div(l, r, "div"),
             Op::AriOp(AriOp::Mul) => self.builder.build_int_mul(l, r, "mul"),
             Op::RelOp(RelOp::Eq) => self.builder.build_int_compare(IntPredicate::EQ, l, r, "Eq"),
-            Op::RelOp(RelOp::Neq) => self.builder.build_int_compare(IntPredicate::NE, l, r, "Neq"),
+            Op::RelOp(RelOp::Neq) => self
+                .builder
+                .build_int_compare(IntPredicate::NE, l, r, "Neq"),
             Op::RelOp(RelOp::Leq) => self
                 .builder
                 .build_int_compare(IntPredicate::SLE, l, r, "Leq"),
@@ -285,7 +312,6 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
 
         for expr in block.iter() {
             self.statement = self.compile_expr(expr);
-            println!("llvm-expr = {:#?}", expr);
 
             if self.statement.1 {
                 return self.statement.0;
@@ -499,6 +525,15 @@ mod parse_tests {
             assert!(llvm(p).is_ok());
         }
 
+        let p = parser("fn main() -> i32 { let a: i32 = 1; let b: i32 = a + 2; return b }")
+            .unwrap()
+            .1;
+        let t = type_checker(p.clone());
+
+        if t {
+            assert!(llvm(p).is_ok());
+        }
+
         let p = parser("fn main() -> bool { let a: bool = true && true; return a }")
             .unwrap()
             .1;
@@ -554,6 +589,15 @@ mod parse_tests {
         }
 
         let p = parser("fn main() -> bool { let a: bool = true > false; return a }")
+            .unwrap()
+            .1;
+        let t = type_checker(p.clone());
+
+        if t {
+            assert!(llvm(p).is_ok());
+        }
+
+        let p = parser("fn main() -> bool { let a: bool = true; let b: bool = a > false return b }")
             .unwrap()
             .1;
         let t = type_checker(p.clone());
