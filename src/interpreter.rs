@@ -178,6 +178,7 @@ fn eval_int_expr(l: i32, op: Op, r: i32) -> ExprRep {
         _ => panic!("Invalid Int expr!"),
     }
 }
+
 fn eval_bool_expr(l: bool, op: Op, r: bool) -> ExprRep {
     match op {
         Op::LogOp(LogOp::And) => ExprRep::Bool(l && r),

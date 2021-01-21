@@ -177,46 +177,48 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
     ) -> IntValue<'ctx> {
         match op {
             Op::LogOp(LogOp::And) => self.builder.build_and(l, r, "and"),
-            // Op::LogOp(LogOp::Or) => ExprRep::Bool(l || r),
-            // Op::RelOp(RelOp::Eq) => ExprRep::Bool(l == r),
-            // Op::RelOp(RelOp::Neq) => ExprRep::Bool(l != r),
-            // Op::RelOp(RelOp::Leq) => ExprRep::Bool(l <= r),
-            // Op::RelOp(RelOp::Geq) => ExprRep::Bool(l >= r),
-            // Op::RelOp(RelOp::Les) => ExprRep::Bool(l < r),
-            // Op::RelOp(RelOp::Gre) => ExprRep::Bool(l > r),
+            Op::LogOp(LogOp::Or) => self.builder.build_or(l, r, "or"),
+            Op::RelOp(RelOp::Eq) => self.builder.build_int_compare(IntPredicate::EQ, l, r, "Eq"),
+            Op::RelOp(RelOp::Neq) => self.builder.build_int_compare(IntPredicate::NE, l, r, "Neq"),
+            Op::RelOp(RelOp::Leq) => self
+                .builder
+                .build_int_compare(IntPredicate::SLE, l, r, "Leq"),
+            Op::RelOp(RelOp::Geq) => self
+                .builder
+                .build_int_compare(IntPredicate::SGE, l, r, "Geq"),
+            Op::RelOp(RelOp::Les) => self
+                .builder
+                .build_int_compare(IntPredicate::SGT, l, r, "Les"),
+            Op::RelOp(RelOp::Gre) => self
+                .builder
+                .build_int_compare(IntPredicate::SLT, l, r, "Gre"),
             _ => panic!("Invalid Bool expr!"),
-            // BoolToken::And => self.builder.build_and(l, r, "and"),
-            // BoolToken::Or => self.builder.build_or(l, r, "or"),
         }
     }
 
     fn compile_int_expr(&self, l: IntValue<'ctx>, op: Op, r: IntValue<'ctx>) -> IntValue<'ctx> {
         match op {
             Op::AriOp(AriOp::Add) => self.builder.build_int_add(l, r, "add"),
-            // Op::AriOp(AriOp::Sub) => self.builder.build_int_add(l, r, "add"),
-            // Op::AriOp(AriOp::Div) => self.builder.build_int_add(l, r, "add"),
-            // Op::AriOp(AriOp::Mul) => self.builder.build_int_add(l, r, "add"),
-            // Op::RelOp(RelOp::Eq) =>  self.builder.build_int_add(l, r, "add"),
-            // Op::RelOp(RelOp::Neq) => self.builder.build_int_add(l, r, "add"),
-            // Op::RelOp(RelOp::Leq) => self.builder.build_int_add(l, r, "add"),
-            // Op::RelOp(RelOp::Geq) => self.builder.build_int_add(l, r, "add"),
-            // Op::RelOp(RelOp::Les) => self.builder.build_int_add(l, r, "add"),
-            // Op::RelOp(RelOp::Gre) => self.builder.build_int_add(l, r, "add"),
+            Op::AriOp(AriOp::Sub) => self.builder.build_int_sub(l, r, "sub"),
+            Op::AriOp(AriOp::Div) => self.builder.build_int_unsigned_div(l, r, "div"),
+            Op::AriOp(AriOp::Mul) => self.builder.build_int_mul(l, r, "mul"),
+            Op::RelOp(RelOp::Eq) => self.builder.build_int_compare(IntPredicate::EQ, l, r, "Eq"),
+            Op::RelOp(RelOp::Neq) => self.builder.build_int_compare(IntPredicate::NE, l, r, "Neq"),
+            Op::RelOp(RelOp::Leq) => self
+                .builder
+                .build_int_compare(IntPredicate::SLE, l, r, "Leq"),
+            Op::RelOp(RelOp::Geq) => self
+                .builder
+                .build_int_compare(IntPredicate::SGE, l, r, "Geq"),
+            Op::RelOp(RelOp::Les) => self
+                .builder
+                .build_int_compare(IntPredicate::SGT, l, r, "Les"),
+            Op::RelOp(RelOp::Gre) => self
+                .builder
+                .build_int_compare(IntPredicate::SLT, l, r, "Gre"),
             _ => panic!("Invalid Int expr!"),
         }
     }
-
-    //     fn compile_bin_op(&mut self, l: Expr, op: Box<Expr>, r: Expr) -> IntValue<'ctx> {
-    //         let l_val = self.compile_stmt(l);
-    //         let r_val = self.compile_stmt(r);
-
-    //         match *op {
-    //             Expr::LogicOp(op) => self.compile_logic_op(l_val, op, r_val),
-    //             Expr::ArithOp(op) => self.compile_arith_op(l_val, op, r_val),
-    //             Expr::RelOp(op) => self.compile_rel_op(l_val, op, r_val),
-    //             _ => panic!("Not a valid expression"),
-    //         }
-    //     }
 
     //     fn compile_if(&mut self, condition: Box<Expr>, block: Vec<Expr>) -> InstructionValue<'ctx> {
     //         let cond = self.compile_stmt(*condition);
@@ -277,60 +279,6 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
             false => self.context.bool_type().const_int(0, false),
         }
     }
-
-    //     fn compile_rel_op(&self, l: IntValue<'ctx>, op: RelOp, r: IntValue<'ctx>) -> IntValue<'ctx> {
-    //         match op {
-    //             RelOp::EqEq => self
-    //                 .builder
-    //                 .build_int_compare(IntPredicate::EQ, l, r, "tmpEq"),
-    //             RelOp::NotEq => self
-    //                 .builder
-    //                 .build_int_compare(IntPredicate::NE, l, r, "tmpneq"),
-    //             RelOp::LesEq => self
-    //                 .builder
-    //                 .build_int_compare(IntPredicate::SLE, l, r, "tmpleq"),
-    //             RelOp::GreEq => self
-    //                 .builder
-    //                 .build_int_compare(IntPredicate::SGE, l, r, "tmpgeq"),
-    //             RelOp::Gre => self
-    //                 .builder
-    //                 .build_int_compare(IntPredicate::SGT, l, r, "tmpgre"),
-    //             RelOp::Les => self
-    //                 .builder
-    //                 .build_int_compare(IntPredicate::SLT, l, r, "tmples"),
-    //         }
-    //     }
-
-    //     fn compile_arith_op(
-    //         &self,
-    //         l: IntValue<'ctx>,
-    //         op: ArithOp,
-    //         r: IntValue<'ctx>,
-    //     ) -> IntValue<'ctx> {
-    //         match op {
-    //             ArithOp::Add => self.builder.build_int_add(l, r, "tmpadd"),
-    //             ArithOp::Sub => self.builder.build_int_sub(l, r, "tmpsub"),
-    //             ArithOp::Mult => self.builder.build_int_mul(l, r, "tmpmul"),
-    //             ArithOp::Div => self.builder.build_int_signed_div(l, r, "tmpdiv"),
-    //         }
-    //     }
-
-    //     fn compile_logic_op(
-    //         &self,
-    //         l: IntValue<'ctx>,
-    //         op: LogicOp,
-    //         r: IntValue<'ctx>,
-    //     ) -> IntValue<'ctx> {
-    //         match op {
-    //             LogicOp::And => self.builder.build_and(l, r, "and"),
-    //             LogicOp::Or => self.builder.build_or(l, r, "or"),
-    //             LogicOp::Not => self.builder.build_not(r, "not"), // TODO: Not sure about this one!
-    //         }
-    //     }
-
-    //     // fn compile_assign_op(&self, op: AssignOp, l: IntValue<'ctx>, r: IntValue<'ctx>) -> IntValue {
-    //     // // TODO: Implement assign operators
-    //     // }
 
     fn compile_block(&mut self, block: Vec<Expr>) -> InstructionValue {
         let mut last_cmd: Option<InstructionValue> = None;
@@ -426,6 +374,13 @@ mod parse_tests {
             assert!(llvm(p).is_ok());
         }
 
+        let p = parser("fn main() -> i32 { return 1 + 1 }").unwrap().1;
+        let t = type_checker(p.clone());
+
+        if t {
+            assert!(llvm(p).is_ok());
+        }
+
         let p = parser("fn main() -> bool { return true }").unwrap().1;
         let t = type_checker(p.clone());
 
@@ -435,7 +390,7 @@ mod parse_tests {
     }
 
     #[test]
-    fn test_llvm_let() {
+    fn test_llvm_let_bin_expr() {
         let p = parser("fn main() -> i32 { let a: i32 = 1; return a }")
             .unwrap()
             .1;
@@ -463,7 +418,142 @@ mod parse_tests {
             assert!(llvm(p).is_ok());
         }
 
+        let p = parser("fn main() -> i32 { let a: i32 = 1 - 1; return a }")
+            .unwrap()
+            .1;
+        let t = type_checker(p.clone());
+
+        if t {
+            assert!(llvm(p).is_ok());
+        }
+
+        let p = parser("fn main() -> i32 { let a: i32 = 1 / 1; return a }")
+            .unwrap()
+            .1;
+        let t = type_checker(p.clone());
+
+        if t {
+            assert!(llvm(p).is_ok());
+        }
+
+        let p = parser("fn main() -> i32 { let a: i32 = 1 * 1; return a }")
+            .unwrap()
+            .1;
+        let t = type_checker(p.clone());
+
+        if t {
+            assert!(llvm(p).is_ok());
+        }
+
+        let p = parser("fn main() -> bool { let a: bool = 1 == 1; return a }")
+            .unwrap()
+            .1;
+        let t = type_checker(p.clone());
+
+        if t {
+            assert!(llvm(p).is_ok());
+        }
+
+        let p = parser("fn main() -> bool { let a: bool = 1 != 1; return a }")
+            .unwrap()
+            .1;
+        let t = type_checker(p.clone());
+
+        if t {
+            assert!(llvm(p).is_ok());
+        }
+
+        let p = parser("fn main() -> bool { let a: bool = 1 <= 3; return a }")
+            .unwrap()
+            .1;
+        let t = type_checker(p.clone());
+
+        if t {
+            assert!(llvm(p).is_ok());
+        }
+
+        let p = parser("fn main() -> bool { let a: bool = 4 >= 3; return a }")
+            .unwrap()
+            .1;
+        let t = type_checker(p.clone());
+
+        if t {
+            assert!(llvm(p).is_ok());
+        }
+
+        let p = parser("fn main() -> bool { let a: bool = 1 < 3; return a }")
+            .unwrap()
+            .1;
+        let t = type_checker(p.clone());
+
+        if t {
+            assert!(llvm(p).is_ok());
+        }
+
+        let p = parser("fn main() -> bool { let a: bool = 4 > 3; return a }")
+            .unwrap()
+            .1;
+        let t = type_checker(p.clone());
+
+        if t {
+            assert!(llvm(p).is_ok());
+        }
+
         let p = parser("fn main() -> bool { let a: bool = true && true; return a }")
+            .unwrap()
+            .1;
+        let t = type_checker(p.clone());
+
+        if t {
+            assert!(llvm(p).is_ok());
+        }
+
+        let p = parser("fn main() -> bool { let a: bool = true == true; return a }")
+            .unwrap()
+            .1;
+        let t = type_checker(p.clone());
+
+        if t {
+            assert!(llvm(p).is_ok());
+        }
+
+        let p = parser("fn main() -> bool { let a: bool = true != false; return a }")
+            .unwrap()
+            .1;
+        let t = type_checker(p.clone());
+
+        if t {
+            assert!(llvm(p).is_ok());
+        }
+
+        let p = parser("fn main() -> bool { let a: bool = true <= false; return a }")
+            .unwrap()
+            .1;
+        let t = type_checker(p.clone());
+
+        if t {
+            assert!(llvm(p).is_ok());
+        }
+
+        let p = parser("fn main() -> bool { let a: bool = true >= false; return a }")
+            .unwrap()
+            .1;
+        let t = type_checker(p.clone());
+
+        if t {
+            assert!(llvm(p).is_ok());
+        }
+
+        let p = parser("fn main() -> bool { let a: bool = true < false; return a }")
+            .unwrap()
+            .1;
+        let t = type_checker(p.clone());
+
+        if t {
+            assert!(llvm(p).is_ok());
+        }
+
+        let p = parser("fn main() -> bool { let a: bool = true > false; return a }")
             .unwrap()
             .1;
         let t = type_checker(p.clone());
