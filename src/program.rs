@@ -26,9 +26,8 @@ pub fn program() -> String {
         }
 
         fn main() -> i32 {
-            let g: i32 = testfn2(); 
-            let h: i32 = testfn3(true, true);
-            return g + h
+            let g: i32 = testfn2() + testfn3(true, true);
+            return g
         }
 
         "

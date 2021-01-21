@@ -31,8 +31,10 @@ struct Opt {
 pub fn cli() {
     let opt = Opt::from_args();
 
+    let test = "fn main() -> i32 {let a: i32 = 1 +1; return a}";
+
     let p = program();
-    let mut ast = match parser(&p) {
+    let mut ast = match parser(&test) {
         Ok(res) => res,
         Err(e) => {
             panic!("Error: {:#}", e)
@@ -45,8 +47,7 @@ pub fn cli() {
 
     if type_checker(ast.clone().1) {
         if opt.llvm {
-            let res = llvm(ast.1);
-            println!("llvm: {:#?}", res);
+            let _res = llvm(ast.1);
         } else {
             ast.1.push(Expr::Return(Box::new(Expr::FnCall(
                 Box::new(Expr::Var("main".to_string())),
