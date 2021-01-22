@@ -273,24 +273,24 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
     fn compile_if_else(
         &mut self,
         cond: Expr,
-        if_branch: Vec<Expr>,
-        else_branch: Vec<Expr>,
+        block1: Vec<Expr>,
+        block2: Vec<Expr>,
     ) -> InstructionValue<'ctx> {
         let condition = self.compile_stmt(cond);
 
-        let basic_block1 = self.context.append_basic_block(self.fn_value(), "b1");
-        let basic_block2 = self.context.append_basic_block(self.fn_value(), "b2");
+        let basic_block1 = self.context.append_basic_block(self.fn_value(), "block1");
+        let basic_block2 = self.context.append_basic_block(self.fn_value(), "block2");
         let cont_block = self.context.append_basic_block(self.fn_value(), "cont");
 
         self.builder
             .build_conditional_branch(condition, basic_block1, basic_block2);
 
         self.builder.position_at_end(basic_block1);
-        self.compile_block(if_branch);
+        self.compile_block(block1);
         self.builder.build_unconditional_branch(cont_block);
 
         self.builder.position_at_end(basic_block2);
-        self.compile_block(else_branch);
+        self.compile_block(block2);
 
         self.builder.build_unconditional_branch(cont_block);
 
@@ -646,14 +646,18 @@ mod parse_tests {
 
     #[test]
     fn test_llvm_if() {
-        let p = parser(" fn main() -> i32 { if true { return 1 }; return 2 } ").unwrap().1;
+        let p = parser(" fn main() -> i32 { if true { return 1 }; return 2 } ")
+            .unwrap()
+            .1;
         let t = type_checker(p.clone());
 
         if t {
             assert!(llvm(p).is_ok());
         }
 
-        let p = parser(" fn main() -> bool { if true { return false }; return true } ").unwrap().1;
+        let p = parser(" fn main() -> bool { if true { return false }; return true } ")
+            .unwrap()
+            .1;
         let t = type_checker(p.clone());
 
         if t {
@@ -663,14 +667,20 @@ mod parse_tests {
 
     #[test]
     fn test_llvm_if_else() {
-        let p = parser(" fn main() -> i32 { if false { return 1 } else { return 3 }; return 2 } ").unwrap().1;
+        let p = parser(" fn main() -> i32 { if false { return 1 } else { return 3 }; return 2 } ")
+            .unwrap()
+            .1;
         let t = type_checker(p.clone());
 
         if t {
             assert!(llvm(p).is_ok());
         }
 
-        let p = parser(" fn main() -> bool { if false { return true } else { return false }; return true } ").unwrap().1;
+        let p = parser(
+            " fn main() -> bool { if false { return true } else { return false }; return true } ",
+        )
+        .unwrap()
+        .1;
         let t = type_checker(p.clone());
 
         if t {
@@ -680,19 +690,22 @@ mod parse_tests {
 
     #[test]
     fn test_llvm_when() {
-        let p = parser(" fn main() -> i32 { while true { return 1 }; return 2 } ").unwrap().1;
+        let p = parser(" fn main() -> i32 { while true { return 1 }; return 2 } ")
+            .unwrap()
+            .1;
         let t = type_checker(p.clone());
 
         if t {
             assert!(llvm(p).is_ok());
         }
 
-        let p = parser(" fn main() -> bool { while true { return false }; return true } ").unwrap().1;
+        let p = parser(" fn main() -> bool { while true { return false }; return true } ")
+            .unwrap()
+            .1;
         let t = type_checker(p.clone());
 
         if t {
             assert!(llvm(p).is_ok());
         }
     }
-
 }
