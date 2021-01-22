@@ -101,9 +101,11 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
                 _ => panic!("Invalid Expr!"),
             },
             Expr::VarExpr(var, op, expr) => (self.compile_var_expr(*var, op, *expr), false),
-            // Expr::If(cond, block) => (self.compile_if(*cond, block), false),
-            // Expr::IfElse(cond, block1, block2) => (self.compile_if_else(*cond, block1, block2), false),
-            // Expr::While(cond, block) => (self.compile_while(*cond, block), false),
+            Expr::If(cond, block) => (self.compile_if(*cond, block), false),
+            Expr::IfElse(cond, block1, block2) => {
+                (self.compile_if_else(*cond, block1, block2), false)
+            }
+            Expr::While(cond, block) => (self.compile_while(*cond, block), false),
             Expr::Return(expr) => {
                 let var = self.compile_stmt(*expr);
                 (self.builder.build_return(Some(&var)), true)
@@ -247,54 +249,88 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
         }
     }
 
-    //     fn compile_if(&mut self, condition: Box<Expr>, block: Vec<Expr>) -> InstructionValue<'ctx> {
-    //         let cond = self.compile_stmt(*condition);
-    //         let then_block = self.context.append_basic_block(self.fn_value(), "then");
-    //         let cont_block = self.context.append_basic_block(self.fn_value(), "cont");
+    fn compile_if(&mut self, cond: Expr, block: Vec<Expr>) -> InstructionValue<'ctx> {
+        let cond = self.compile_stmt(cond);
+        let then_block = self.context.append_basic_block(self.fn_value(), "then");
+        let cont_block = self.context.append_basic_block(self.fn_value(), "cont");
 
-    //         self.builder
-    //             .build_conditional_branch(cond, then_block, cont_block);
-    //         self.builder.position_at_end(then_block);
-    //         self.compile_block(block);
+        self.builder
+            .build_conditional_branch(cond, then_block, cont_block);
+        self.builder.position_at_end(then_block);
+        self.compile_block(block);
 
-    //         self.builder.build_unconditional_branch(cont_block);
-    //         self.builder.position_at_end(cont_block);
+        self.builder.build_unconditional_branch(cont_block);
+        self.builder.position_at_end(cont_block);
 
-    //         let phi = self.builder.build_phi(self.context.i32_type(), "iftmp");
-    //         phi.add_incoming(&[
-    //             (&self.compile_num(0), then_block),
-    //             (&self.compile_num(0), cont_block),
-    //         ]);
-    //         phi.as_instruction()
-    //     }
+        let phi = self.builder.build_phi(self.context.i32_type(), "if");
+        phi.add_incoming(&[
+            (&self.compile_int(1), then_block),
+            (&self.compile_int(0), cont_block),
+        ]);
+        phi.as_instruction()
+    }
 
-    //     fn compile_while(&mut self, condition: Box<Expr>, block: Vec<Expr>) -> InstructionValue<'ctx> {
-    //         let do_block = self.context.append_basic_block(self.fn_value(), "do");
-    //         let cont_block = self.context.append_basic_block(self.fn_value(), "cont");
+    fn compile_if_else(
+        &mut self,
+        cond: Expr,
+        if_branch: Vec<Expr>,
+        else_branch: Vec<Expr>,
+    ) -> InstructionValue<'ctx> {
+        let condition = self.compile_stmt(cond);
 
-    //         self.builder.build_conditional_branch(
-    //             self.compile_stmt(*condition.clone()),
-    //             do_block,
-    //             cont_block,
-    //         );
-    //         self.builder.position_at_end(do_block);
-    //         self.compile_block(block);
+        let basic_block1 = self.context.append_basic_block(self.fn_value(), "b1");
+        let basic_block2 = self.context.append_basic_block(self.fn_value(), "b2");
+        let cont_block = self.context.append_basic_block(self.fn_value(), "cont");
 
-    //         self.builder.build_conditional_branch(
-    //             self.compile_stmt(*condition.clone()),
-    //             do_block,
-    //             cont_block,
-    //         );
-    //         self.builder.position_at_end(cont_block);
+        self.builder
+            .build_conditional_branch(condition, basic_block1, basic_block2);
 
-    //         // This phi node does nothing, used to return an InstructionValue
-    //         let phi = self.builder.build_phi(self.context.i32_type(), "whiletmp");
-    //         phi.add_incoming(&[
-    //             (&self.compile_num(0), do_block),
-    //             (&self.compile_num(0), do_block),
-    //         ]);
-    //         phi.as_instruction()
-    //     }
+        self.builder.position_at_end(basic_block1);
+        self.compile_block(if_branch);
+        self.builder.build_unconditional_branch(cont_block);
+
+        self.builder.position_at_end(basic_block2);
+        self.compile_block(else_branch);
+
+        self.builder.build_unconditional_branch(cont_block);
+
+        self.builder.position_at_end(cont_block);
+        let phi = self.builder.build_phi(self.context.i32_type(), "iftmp");
+
+        phi.add_incoming(&[
+            (&self.compile_int(1), basic_block1),
+            (&self.compile_int(0), basic_block2),
+        ]);
+
+        phi.as_instruction()
+    }
+
+    fn compile_while(&mut self, cond: Expr, block: Vec<Expr>) -> InstructionValue<'ctx> {
+        let do_block = self.context.append_basic_block(self.fn_value(), "do");
+        let cont_block = self.context.append_basic_block(self.fn_value(), "cont");
+
+        self.builder.build_conditional_branch(
+            self.compile_stmt(cond.clone()),
+            do_block,
+            cont_block,
+        );
+        self.builder.position_at_end(do_block);
+        self.compile_block(block);
+
+        self.builder.build_conditional_branch(
+            self.compile_stmt(cond.clone()),
+            do_block,
+            cont_block,
+        );
+        self.builder.position_at_end(cont_block);
+
+        let phi = self.builder.build_phi(self.context.i32_type(), "while");
+        phi.add_incoming(&[
+            (&self.compile_int(0), do_block),
+            (&self.compile_int(1), do_block),
+        ]);
+        phi.as_instruction()
+    }
 
     fn compile_int(&self, int: i32) -> IntValue<'ctx> {
         self.context.i32_type().const_int(int as u64, false)
@@ -597,13 +633,66 @@ mod parse_tests {
             assert!(llvm(p).is_ok());
         }
 
-        let p = parser("fn main() -> bool { let a: bool = true; let b: bool = a > false return b }")
-            .unwrap()
-            .1;
+        let p =
+            parser("fn main() -> bool { let a: bool = true; let b: bool = a > false return b }")
+                .unwrap()
+                .1;
         let t = type_checker(p.clone());
 
         if t {
             assert!(llvm(p).is_ok());
         }
     }
+
+    #[test]
+    fn test_llvm_if() {
+        let p = parser(" fn main() -> i32 { if true { return 1 }; return 2 } ").unwrap().1;
+        let t = type_checker(p.clone());
+
+        if t {
+            assert!(llvm(p).is_ok());
+        }
+
+        let p = parser(" fn main() -> bool { if true { return false }; return true } ").unwrap().1;
+        let t = type_checker(p.clone());
+
+        if t {
+            assert!(llvm(p).is_ok());
+        }
+    }
+
+    #[test]
+    fn test_llvm_if_else() {
+        let p = parser(" fn main() -> i32 { if false { return 1 } else { return 3 }; return 2 } ").unwrap().1;
+        let t = type_checker(p.clone());
+
+        if t {
+            assert!(llvm(p).is_ok());
+        }
+
+        let p = parser(" fn main() -> bool { if false { return true } else { return false }; return true } ").unwrap().1;
+        let t = type_checker(p.clone());
+
+        if t {
+            assert!(llvm(p).is_ok());
+        }
+    }
+
+    #[test]
+    fn test_llvm_when() {
+        let p = parser(" fn main() -> i32 { while true { return 1 }; return 2 } ").unwrap().1;
+        let t = type_checker(p.clone());
+
+        if t {
+            assert!(llvm(p).is_ok());
+        }
+
+        let p = parser(" fn main() -> bool { while true { return false }; return true } ").unwrap().1;
+        let t = type_checker(p.clone());
+
+        if t {
+            assert!(llvm(p).is_ok());
+        }
+    }
+
 }
