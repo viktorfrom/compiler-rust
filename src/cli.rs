@@ -31,7 +31,7 @@ struct Opt {
 pub fn cli() {
     let opt = Opt::from_args();
 
-    let test = " fn main() -> i32 { if false { return 1 } else { return 3 }; return 2 } ";
+    let test = " fn main() -> i32 {fn testfn() -> i32 {return 1}; return testfn()} ";
 
     let p = program();
     let mut ast = match parser(&test) {

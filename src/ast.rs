@@ -1,8 +1,8 @@
 #[derive(Debug, PartialEq, Clone)]
 pub enum Expr {
     Int(i32),
-    Var(String),
     Bool(bool),
+    Var(String),
 
     BinExpr(Box<Expr>, Op, Box<Expr>),
     VarExpr(Box<Expr>, Op, Box<Expr>),

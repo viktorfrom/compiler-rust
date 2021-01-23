@@ -86,26 +86,20 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
 
     fn compile_expr(&mut self, expr: &Expr) -> (InstructionValue<'ctx>, bool) {
         match expr.clone() {
-            Expr::Let(left, var_type, right) => match *left {
-                Expr::Var(left) => {
-                    let ptr_val = match var_type {
-                        Type::Int => self.create_entry_block_alloca(&left, false),
-                        Type::Bool => self.create_entry_block_alloca(&left, true),
-                        _ => panic!("Invalid Let expr type!"),
-                    };
-                    let val = self.compile_stmt(*right);
-                    let store = self.builder.build_store(ptr_val, val);
+            Expr::Let(left, var_type, expr) => (self.compile_let(*left, var_type, *expr), false),
 
-                    (store, false)
-                }
-                _ => panic!("Invalid Expr!"),
-            },
             Expr::VarExpr(var, op, expr) => (self.compile_var_expr(*var, op, *expr), false),
+
             Expr::If(cond, block) => (self.compile_if(*cond, block), false),
             Expr::IfElse(cond, block1, block2) => {
                 (self.compile_if_else(*cond, block1, block2), false)
             }
             Expr::While(cond, block) => (self.compile_while(*cond, block), false),
+
+            // Expr::Fn(fn_var, params, ret_type, block) => {
+            //     (self.compile_fn(*fn_var, params, ret_type, block), false)
+            // }
+
             Expr::Return(expr) => {
                 let var = self.compile_stmt(*expr);
                 (self.builder.build_return(Some(&var)), true)
@@ -132,9 +126,59 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
                     self.builder.build_load(*ptr_val, &var).into_int_value()
                 }
             }
+
             Expr::BinExpr(l, op, r) => self.compile_bin_expr(*l, op, *r),
-            // Expr::FuncCall(_) => (self.compile_expr(keyword).as_instruction().unwrap(), false),
+
+            // Expr::FnCall(func_name, args) => {
+            //     let name = match *func_name {
+            //         Expr::Var(v) => v,
+            //         _ => panic!("asdA"),
+            //     };
+
+            //     let function = self.module.get_function(&name).unwrap();
+
+            //     let call = self.builder.build_call(function, &[], &name).try_as_basic_value().left().unwrap();
+            //     let test = match call {
+            //         value => value.into_int_value(),
+            //     };
+            //     test
+            // }
             _ => panic!("Invalid compile stmt!"),
+        }
+    }
+
+    // fn compile_fn(
+    //     &mut self,
+    //     fn_var: Expr,
+    //     params: Vec<(Expr, Type)>,
+    //     ret_type: Type,
+    //     block: Vec<Expr>,
+    // ) -> InstructionValue<'ctx> {
+
+    //     let fn_type = self.context.i32_type().fn_type(&[], false);
+    //     let test = self.module.add_function("testfn", fn_type, None);
+    //     println!("test = {:#?}", test);
+    //     self.context.append_basic_block(test, "entry");
+
+    //     self.get_function("testfn").unwrap();
+
+    //     self.builder.build_return(None)
+    // }
+
+    fn compile_let(&mut self, var: Expr, var_type: Type, expr: Expr) -> InstructionValue<'ctx> {
+        match var {
+            Expr::Var(left) => {
+                let ptr_val = match var_type {
+                    Type::Int => self.create_entry_block_alloca(&left, false),
+                    Type::Bool => self.create_entry_block_alloca(&left, true),
+                    _ => panic!("Invalid Let expr type!"),
+                };
+                let val = self.compile_stmt(expr);
+                let store = self.builder.build_store(ptr_val, val);
+
+                store
+            }
+            _ => panic!("Invalid Expr!"),
         }
     }
 
