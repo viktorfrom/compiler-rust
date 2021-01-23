@@ -96,10 +96,9 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
             }
             Expr::While(cond, block) => (self.compile_while(*cond, block), false),
 
-            // Expr::Fn(fn_var, params, ret_type, block) => {
-            //     (self.compile_fn(*fn_var, params, ret_type, block), false)
-            // }
-
+            Expr::Fn(fn_var, params, ret_type, block) => {
+                (self.compile_fn(*fn_var, params, ret_type, block), false)
+            }
             Expr::Return(expr) => {
                 let var = self.compile_stmt(*expr);
                 (self.builder.build_return(Some(&var)), true)
@@ -129,41 +128,23 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
 
             Expr::BinExpr(l, op, r) => self.compile_bin_expr(*l, op, *r),
 
-            // Expr::FnCall(func_name, args) => {
-            //     let name = match *func_name {
-            //         Expr::Var(v) => v,
-            //         _ => panic!("asdA"),
-            //     };
+            Expr::FnCall(func_name, args) => {
+                let name = match *func_name {
+                    Expr::Var(v) => v,
+                    _ => panic!("asdA"),
+                };
 
-            //     let function = self.module.get_function(&name).unwrap();
+                let function = self.module.get_function(&name).unwrap();
 
-            //     let call = self.builder.build_call(function, &[], &name).try_as_basic_value().left().unwrap();
-            //     let test = match call {
-            //         value => value.into_int_value(),
-            //     };
-            //     test
-            // }
+                let call = self.builder.build_call(function, &[], &name).try_as_basic_value().left().unwrap();
+                let test = match call {
+                    value => value.into_int_value(),
+                };
+                test
+            }
             _ => panic!("Invalid compile stmt!"),
         }
     }
-
-    // fn compile_fn(
-    //     &mut self,
-    //     fn_var: Expr,
-    //     params: Vec<(Expr, Type)>,
-    //     ret_type: Type,
-    //     block: Vec<Expr>,
-    // ) -> InstructionValue<'ctx> {
-
-    //     let fn_type = self.context.i32_type().fn_type(&[], false);
-    //     let test = self.module.add_function("testfn", fn_type, None);
-    //     println!("test = {:#?}", test);
-    //     self.context.append_basic_block(test, "entry");
-
-    //     self.get_function("testfn").unwrap();
-
-    //     self.builder.build_return(None)
-    // }
 
     fn compile_let(&mut self, var: Expr, var_type: Type, expr: Expr) -> InstructionValue<'ctx> {
         match var {
@@ -387,7 +368,7 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
         }
     }
 
-    fn compile_block(&mut self, block: Vec<Expr>) -> InstructionValue {
+    fn compile_block(&mut self, block: Vec<Expr>) -> InstructionValue<'ctx> {
         let mut last_cmd: Option<InstructionValue> = None;
 
         for expr in block.iter() {
@@ -403,6 +384,26 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
             Some(instruction) => instruction,
             None => panic!(),
         }
+    }
+
+    fn compile_fn(
+        &mut self,
+        fn_var: Expr,
+        _params: Vec<(Expr, Type)>,
+        _ret_type: Type,
+        block: Vec<Expr>,
+    ) -> InstructionValue<'ctx> {
+        let u32_type = self.context.i32_type();
+        let fn_type = u32_type.fn_type(&[], false);
+        let function = match fn_var {
+            Expr::Var(v) => self.module.add_function(&v, fn_type, None),
+            _ => panic!("Invalid fn var!"),
+        };
+        let basic_block = self.context.append_basic_block(function, "entry");
+
+        self.fn_value_opt = Some(function);
+        self.builder.position_at_end(basic_block);
+        self.compile_block(block)
     }
 }
 
@@ -426,32 +427,13 @@ pub fn llvm(ast: Vec<Expr>) -> Result<(), Box<dyn Error>> {
     };
 
     for expr in ast {
-        let fn_var: String;
-        let params: Vec<(Expr, Type)>;
-        let ret_type: Type;
-        let block: Vec<Expr>;
-
         match expr {
-            Expr::Fn(n, p, t, b) => match *n {
-                Expr::Var(func_name) => {
-                    fn_var = func_name.to_string();
-                    params = p;
-                    ret_type = t;
-                    block = b;
-                }
-                _ => continue,
-            },
+            Expr::Fn(n, p, t, b) => {
+                compiler.compile_fn(*n, p, t, b);
+            }
+            // TODO: add let-statements etc. here? 
             _ => continue,
         }
-
-        let u32_type = context.i32_type();
-        let fn_type = u32_type.fn_type(&[], false);
-        let function = compiler.module.add_function(&*fn_var, fn_type, None);
-        let basic_block = context.append_basic_block(function, "entry");
-
-        compiler.fn_value_opt = Some(function);
-        compiler.builder.position_at_end(basic_block);
-        compiler.compile_block(block);
     }
 
     compiler.module.print_to_stderr();
