@@ -32,6 +32,23 @@ struct Opt {
 pub fn cli() {
     let opt = Opt::from_args();
 
+
+    let test2  = "
+        fn testfn1() -> i32 {
+            return 7
+        }
+
+        fn testfn2() -> i32 {
+            return 3
+        }
+
+
+        fn main() -> i32 {
+            let g: i32 = testfn2();
+            return g
+        }
+    ";
+
     let test = "        
         fn testfn3() -> i32 {
             let f: bool = true && true;
@@ -48,7 +65,7 @@ pub fn cli() {
         }";
 
     let p = program();
-    let mut ast = match parser(&test) {
+    let mut ast = match parser(&test2) {
         Ok(res) => res,
         Err(e) => {
             panic!("Error: {:#}", e)

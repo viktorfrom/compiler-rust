@@ -90,7 +90,6 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
     }
 
     fn compile_stmt(&mut self, expr: Expr) -> IntValue<'ctx> {
-        println!("expr = {:#?}", expr);
         match expr.clone() {
             Expr::Int(i) => self.compile_int(i),
             Expr::Bool(b) => self.compile_bool(b),
@@ -132,7 +131,6 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
     }
 
     fn compile_let(&mut self, var: Expr, var_type: Type, expr: Expr) -> InstructionValue<'ctx> {
-        // println!("var = {:#?}, expr = {:#?}, ", var, expr);
         match (var, expr.clone()) {
             (Expr::Var(left), Expr::VarExpr(v, _, _)) => {
                 let ptr_val = match var_type {
@@ -167,10 +165,8 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
     }
 
     fn compile_var_expr(&mut self, var: Expr, op: Op, expr: Expr) -> InstructionValue<'ctx> {
-        // println!("var = {:#?}, var = {:#?}, var = {:#?}, ", var, op, expr);
         let old_val = self.compile_stmt(var.clone());
         let val = self.compile_stmt(expr.clone());
-        // println!("old_val = {:#?}, val = {:#?}", old_val, val);
 
         match (var.clone(), op.clone(), expr.clone()) {
             (Expr::Var(v), Op::AssOp(AssOp::Eq), Expr::Int(_)) => {
@@ -248,6 +244,10 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
                 }
             }
             (_, Expr::BinExpr(_, _, _)) => self.compile_stmt(r),
+            (_, Expr::FnCall(_, _)) => {
+                // TODO: Add fn addition as well? 
+                return self.compile_stmt(r);
+            }
             (_, _) => {
                 let left_val = self.compile_stmt(l);
                 let right_val = self.compile_stmt(r);
@@ -500,7 +500,6 @@ pub fn llvm(ast: Vec<Expr>) -> Result<(), Box<dyn Error>> {
             Expr::Fn(n, p, t, b) => {
                 compiler.compile_fn(*n, p, t, b);
             }
-            // TODO: add let-statements etc. here?
             _ => continue,
         }
     }
@@ -547,7 +546,7 @@ mod parse_tests {
     }
 
     #[test]
-    fn test_llvm_let_bin_expr() {
+    fn test_llvm_let_bin_expr_int() {
         let p = parser("fn main() -> i32 { let a: i32 = 1; return a }")
             .unwrap()
             .1;
@@ -664,7 +663,10 @@ mod parse_tests {
         if t {
             assert!(llvm(p).is_ok());
         }
+    }
 
+    #[test]
+    fn test_llvm_let_bin_expr_bool() {
         let p = parser("fn main() -> bool { let a: bool = true && true; return a }")
             .unwrap()
             .1;
@@ -732,6 +734,28 @@ mod parse_tests {
             parser("fn main() -> bool { let a: bool = true; let b: bool = a > false; return b }")
                 .unwrap()
                 .1;
+        let t = type_checker(p.clone());
+
+        if t {
+            assert!(llvm(p).is_ok());
+        }
+    }
+        
+    #[test]
+    fn test_llvm_let_fn_call() {
+        let p = parser("
+                fn testfn() -> i32 {
+                let b: i32 = (((1 + 2 + 3)));
+                return b
+            }
+
+            fn main() -> i32 {
+                let g: i32 = testfn();
+                return g
+            }
+        ")
+            .unwrap()
+            .1;
         let t = type_checker(p.clone());
 
         if t {
