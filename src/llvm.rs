@@ -7,18 +7,12 @@ use self::inkwell::{
     context::Context,
     execution_engine::{ExecutionEngine, JitFunction},
     module::Module,
-    values::{
-        FunctionValue, InstructionValue, IntValue,
-        PointerValue,
-    },
+    values::{FunctionValue, InstructionValue, IntValue, PointerValue},
     IntPredicate, OptimizationLevel,
 };
 
 use core::panic;
-use std::{
-    collections::HashMap,
-    error::Error,
-};
+use std::{collections::HashMap, error::Error};
 
 type ExprFunc = unsafe extern "C" fn() -> i32;
 
@@ -132,7 +126,7 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
                     value => value.into_int_value(),
                 };
 
-                return test
+                return test;
             }
             _ => panic!("Invalid compile stmt!"),
         }
@@ -140,8 +134,23 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
 
     fn compile_let(&mut self, var: Expr, var_type: Type, expr: Expr) -> InstructionValue<'ctx> {
         println!("var = {:#?}, expr = {:#?}, ", var, expr);
-        match var {
-            Expr::Var(left) => {
+        match (var, expr.clone()) {
+            (Expr::Var(left), Expr::VarExpr(_, _, _)) => {
+                let ptr_val = match var_type {
+                    Type::Int => self.create_entry_block_alloca(&left, false),
+                    Type::Bool => self.create_entry_block_alloca(&left, true),
+                    _ => panic!("Invalid Let expr type!"),
+                };
+
+                let val = self.compile_expr(&expr).0;
+                println!("val = {:#?}", val);
+
+                let val = self.compile_int(1);
+                let store = self.builder.build_store(ptr_val, val);
+
+                store
+            }
+            (Expr::Var(left), _) => {
                 let ptr_val = match var_type {
                     Type::Int => self.create_entry_block_alloca(&left, false),
                     Type::Bool => self.create_entry_block_alloca(&left, true),
@@ -158,8 +167,9 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
 
     fn compile_var_expr(&mut self, var: Expr, op: Op, expr: Expr) -> InstructionValue<'ctx> {
         println!("var = {:#?}, var = {:#?}, var = {:#?}, ", var, op, expr);
-        let val = self.compile_stmt(expr.clone());
         let old_val = self.compile_stmt(var.clone());
+        let val = self.compile_stmt(expr.clone());
+        println!("old_val = {:#?}, val = {:#?}", old_val, val);
 
         match (var.clone(), op.clone(), expr.clone()) {
             (Expr::Var(v), Op::AssOp(AssOp::Eq), Expr::Int(_)) => {
@@ -196,6 +206,15 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
 
                 self.builder.build_store(*var_ptr, new_val)
             }
+            // (Expr::Var(v1), _, Expr::Var(v2)) => {
+            //     println!("v1 = {:#?}, v2 = {:#?}, ", v1, v2);
+
+            //     let var_ptr = self.get_variable(&v1);
+            //     let new_val = self.compile_int_expr(old_val, op, val);
+            //     println!("new_val = {:#?}", new_val);
+
+            //     self.builder.build_store(*var_ptr, new_val)
+            // }
             _ => panic!("Invalid Var op!"),
         }
     }
@@ -227,11 +246,15 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
                     let right = self.compile_stmt(r);
                     self.compile_bool_expr(left, op, right)
                 } else {
-                    let a = self.compile_stmt(r);
-                    return a;
+                    return self.compile_stmt(r);
                 }
             }
             (_, Expr::BinExpr(_, _, _)) => self.compile_stmt(r),
+            // (_, _) => {
+            //     let left_val = self.compile_stmt(l);
+            //     let right_val = self.compile_stmt(r);
+            //     self.compile_int_expr(left_val, op, right_val)
+            // } 
             _ => panic!("Invalid Bin expr!"),
         }
     }
@@ -393,7 +416,7 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
 
             if self.statement.1 {
                 let asd = self.statement.0;
-                return asd
+                return asd;
             }
             last_cmd = Some(self.statement.0);
         }
@@ -689,45 +712,42 @@ mod parse_tests {
             assert!(llvm(p).is_ok());
         }
 
-        let p =
-            parser(" fn main() -> i32 {let a: i32 = 3; a += 2; return a} ")
-                .unwrap()
-                .1;
+        let p = parser(" fn main() -> i32 {let a: i32 = 3; a += 2; return a} ")
+            .unwrap()
+            .1;
         let t = type_checker(p.clone());
 
         if t {
             assert!(llvm(p).is_ok());
         }
 
-        let p =
-            parser(" fn main() -> i32 {let a: i32 = 3; a -= 2; return a} ")
-                .unwrap()
-                .1;
+        let p = parser(" fn main() -> i32 {let a: i32 = 3; a -= 2; return a} ")
+            .unwrap()
+            .1;
         let t = type_checker(p.clone());
 
         if t {
             assert!(llvm(p).is_ok());
         }
 
-        let p =
-            parser(" fn main() -> i32 {let a: i32 = 3; a /= 2; return a} ")
-                .unwrap()
-                .1;
+        let p = parser(" fn main() -> i32 {let a: i32 = 3; a /= 2; return a} ")
+            .unwrap()
+            .1;
         let t = type_checker(p.clone());
 
         if t {
             assert!(llvm(p).is_ok());
         }
 
-        let p =
-            parser(" fn main() -> i32 {let a: i32 = 3; a /= 2; return a} ")
-                .unwrap()
-                .1;
+        let p = parser(" fn main() -> i32 {let a: i32 = 3; a /= 2; return a} ")
+            .unwrap()
+            .1;
         let t = type_checker(p.clone());
 
         if t {
             assert!(llvm(p).is_ok());
         }
+
     }
 
     #[test]
