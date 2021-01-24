@@ -1,5 +1,4 @@
 use crate::ast::*;
-use crate::memory::*;
 
 extern crate inkwell;
 
@@ -8,24 +7,17 @@ use self::inkwell::{
     context::Context,
     execution_engine::{ExecutionEngine, JitFunction},
     module::Module,
-    passes::PassManager,
-    types::BasicTypeEnum,
     values::{
-        BasicValue, BasicValueEnum, FloatValue, FunctionValue, InstructionValue, IntValue,
+        FunctionValue, InstructionValue, IntValue,
         PointerValue,
     },
-    FloatPredicate, IntPredicate, OptimizationLevel,
+    IntPredicate, OptimizationLevel,
 };
 
 use core::panic;
 use std::{
-    borrow::Borrow,
     collections::HashMap,
     error::Error,
-    io::{self, Write},
-    iter::Peekable,
-    ops::DerefMut,
-    str::Chars,
 };
 
 type ExprFunc = unsafe extern "C" fn() -> i32;
@@ -47,11 +39,6 @@ pub struct Compiler<'a, 'ctx> {
 }
 
 impl<'a, 'ctx> Compiler<'a, 'ctx> {
-    #[inline]
-    fn get_function(&self, name: &str) -> Option<FunctionValue<'ctx>> {
-        self.module.get_function(name)
-    }
-
     #[inline]
     fn fn_value(&self) -> FunctionValue<'ctx> {
         self.fn_value_opt.unwrap()
@@ -114,8 +101,8 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
             Expr::Bool(b) => self.compile_bool(b),
             Expr::Var(var) => {
                 if var != "" {
-                    let val = self.get_variable(&var);
-                    self.builder.build_load(*val, &var).into_int_value()
+                    let ptr_val = self.get_variable(&var);
+                    self.builder.build_load(*ptr_val, &var).into_int_value()
                 } else {
                     let alloca = self.create_entry_block_alloca("empty", false);
                     let val = self.compile_stmt(Expr::Int(0));
@@ -128,25 +115,31 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
 
             Expr::BinExpr(l, op, r) => self.compile_bin_expr(*l, op, *r),
 
-            Expr::FnCall(func_name, args) => {
+            Expr::FnCall(func_name, _args) => {
                 let name = match *func_name {
                     Expr::Var(v) => v,
-                    _ => panic!("asdA"),
+                    _ => panic!("Invalid Fn Var!"),
                 };
 
                 let function = self.module.get_function(&name).unwrap();
-
-                let call = self.builder.build_call(function, &[], &name).try_as_basic_value().left().unwrap();
+                let call = self
+                    .builder
+                    .build_call(function, &[], &name)
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap();
                 let test = match call {
                     value => value.into_int_value(),
                 };
-                test
+
+                return test
             }
             _ => panic!("Invalid compile stmt!"),
         }
     }
 
     fn compile_let(&mut self, var: Expr, var_type: Type, expr: Expr) -> InstructionValue<'ctx> {
+        println!("var = {:#?}, expr = {:#?}, ", var, expr);
         match var {
             Expr::Var(left) => {
                 let ptr_val = match var_type {
@@ -164,9 +157,11 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
     }
 
     fn compile_var_expr(&mut self, var: Expr, op: Op, expr: Expr) -> InstructionValue<'ctx> {
+        println!("var = {:#?}, var = {:#?}, var = {:#?}, ", var, op, expr);
         let val = self.compile_stmt(expr.clone());
+        let old_val = self.compile_stmt(var.clone());
 
-        match (var, op, expr) {
+        match (var.clone(), op.clone(), expr.clone()) {
             (Expr::Var(v), Op::AssOp(AssOp::Eq), Expr::Int(_)) => {
                 let var_ptr = self.get_variable(&v);
 
@@ -177,13 +172,35 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
 
                 self.builder.build_store(*var_ptr, val)
             }
+            (Expr::Var(v), Op::AssOp(AssOp::AddEq), Expr::Int(_)) => {
+                let var_ptr = self.get_variable(&v);
+                let new_val = self.compile_int_expr(old_val, Op::AriOp(AriOp::Add), val);
 
+                self.builder.build_store(*var_ptr, new_val)
+            }
+            (Expr::Var(v), Op::AssOp(AssOp::SubEq), Expr::Int(_)) => {
+                let var_ptr = self.get_variable(&v);
+                let new_val = self.compile_int_expr(old_val, Op::AriOp(AriOp::Sub), val);
+
+                self.builder.build_store(*var_ptr, new_val)
+            }
+            (Expr::Var(v), Op::AssOp(AssOp::DivEq), Expr::Int(_)) => {
+                let var_ptr = self.get_variable(&v);
+                let new_val = self.compile_int_expr(old_val, Op::AriOp(AriOp::Div), val);
+
+                self.builder.build_store(*var_ptr, new_val)
+            }
+            (Expr::Var(v), Op::AssOp(AssOp::MulEq), Expr::Int(_)) => {
+                let var_ptr = self.get_variable(&v);
+                let new_val = self.compile_int_expr(old_val, Op::AriOp(AriOp::Mul), val);
+
+                self.builder.build_store(*var_ptr, new_val)
+            }
             _ => panic!("Invalid Var op!"),
         }
     }
 
     fn compile_bin_expr(&mut self, l: Expr, op: Op, r: Expr) -> IntValue<'ctx> {
-        // println!("var = {:#?}, op = {:#?}, expr = {:#?}, ", l, op, r);
         match (l.clone(), r.clone()) {
             (Expr::Int(_), Expr::Int(_)) => {
                 let left = self.compile_stmt(l);
@@ -375,7 +392,8 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
             self.statement = self.compile_expr(expr);
 
             if self.statement.1 {
-                return self.statement.0;
+                let asd = self.statement.0;
+                return asd
             }
             last_cmd = Some(self.statement.0);
         }
@@ -395,11 +413,13 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
     ) -> InstructionValue<'ctx> {
         let u32_type = self.context.i32_type();
         let fn_type = u32_type.fn_type(&[], false);
-        let function = match fn_var {
-            Expr::Var(v) => self.module.add_function(&v, fn_type, None),
+
+        let name = match fn_var {
+            Expr::Var(v) => v,
             _ => panic!("Invalid fn var!"),
         };
-        let basic_block = self.context.append_basic_block(function, "entry");
+        let function = self.module.add_function(&name, fn_type, None);
+        let basic_block = self.context.append_basic_block(function, &name);
 
         self.fn_value_opt = Some(function);
         self.builder.position_at_end(basic_block);
@@ -431,7 +451,7 @@ pub fn llvm(ast: Vec<Expr>) -> Result<(), Box<dyn Error>> {
             Expr::Fn(n, p, t, b) => {
                 compiler.compile_fn(*n, p, t, b);
             }
-            // TODO: add let-statements etc. here? 
+            // TODO: add let-statements etc. here?
             _ => continue,
         }
     }
@@ -668,6 +688,46 @@ mod parse_tests {
         if t {
             assert!(llvm(p).is_ok());
         }
+
+        let p =
+            parser(" fn main() -> i32 {let a: i32 = 3; a += 2; return a} ")
+                .unwrap()
+                .1;
+        let t = type_checker(p.clone());
+
+        if t {
+            assert!(llvm(p).is_ok());
+        }
+
+        let p =
+            parser(" fn main() -> i32 {let a: i32 = 3; a -= 2; return a} ")
+                .unwrap()
+                .1;
+        let t = type_checker(p.clone());
+
+        if t {
+            assert!(llvm(p).is_ok());
+        }
+
+        let p =
+            parser(" fn main() -> i32 {let a: i32 = 3; a /= 2; return a} ")
+                .unwrap()
+                .1;
+        let t = type_checker(p.clone());
+
+        if t {
+            assert!(llvm(p).is_ok());
+        }
+
+        let p =
+            parser(" fn main() -> i32 {let a: i32 = 3; a /= 2; return a} ")
+                .unwrap()
+                .1;
+        let t = type_checker(p.clone());
+
+        if t {
+            assert!(llvm(p).is_ok());
+        }
     }
 
     #[test]
@@ -726,6 +786,18 @@ mod parse_tests {
         }
 
         let p = parser(" fn main() -> bool { while true { return false }; return true } ")
+            .unwrap()
+            .1;
+        let t = type_checker(p.clone());
+
+        if t {
+            assert!(llvm(p).is_ok());
+        }
+    }
+
+    #[test]
+    fn test_llvm_fn() {
+        let p = parser(" fn testfn() -> i32 {return 2} fn main() -> i32 {return testfn()} ")
             .unwrap()
             .1;
         let t = type_checker(p.clone());

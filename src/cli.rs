@@ -1,10 +1,11 @@
 use structopt::StructOpt;
 
+use crate::ast::*;
+use crate::interpreter::*;
+use crate::llvm::*;
 use crate::parser::*;
 use crate::program::*;
 use crate::type_checker::*;
-use crate::{ast::*, llvm};
-use crate::{interpreter::interpreter, llvm::*};
 
 #[derive(Debug, StructOpt)]
 #[structopt(
@@ -31,7 +32,10 @@ struct Opt {
 pub fn cli() {
     let opt = Opt::from_args();
 
-    let test = " fn main() -> i32 {fn testfn() -> i32 {return 1}; return testfn()} ";
+    // let test = " fn testfn() -> i32 {return 2} fn main() -> i32 {return testfn()} ";
+    let test = " fn main() -> i32 {let a:i32 = 1; let b:i32 = 2; let c:i32 = a + b; return c} ";
+    // let test = " fn testfn() -> i32 { if false { return 1 } else { return 3 }; return 2 } fn main() -> i32 {return testfn()} ";
+
 
     let p = program();
     let mut ast = match parser(&test) {
