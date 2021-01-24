@@ -90,6 +90,7 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
     }
 
     fn compile_stmt(&mut self, expr: Expr) -> IntValue<'ctx> {
+        println!("expr = {:#?}", expr);
         match expr.clone() {
             Expr::Int(i) => self.compile_int(i),
             Expr::Bool(b) => self.compile_bool(b),
@@ -122,11 +123,9 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
                     .try_as_basic_value()
                     .left()
                     .unwrap();
-                let test = match call {
+                match call {
                     value => value.into_int_value(),
-                };
-
-                return test;
+                }
             }
             _ => panic!("Invalid compile stmt!"),
         }
@@ -147,12 +146,10 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
                 let right_expr_val = match *v {
                     Expr::Var(_) => self.compile_stmt(*v),
 
-                    _ => panic!(),
+                    _ => panic!("Invalid right expr val!"),
                 };
 
-                let store = self.builder.build_store(ptr_val, right_expr_val);
-
-                store
+                return self.builder.build_store(ptr_val, right_expr_val);
             }
             (Expr::Var(left), _) => {
                 let ptr_val = match var_type {
@@ -210,13 +207,9 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
 
                 self.builder.build_store(*var_ptr, new_val)
             }
-            (Expr::Var(v1), _, Expr::Var(v2)) => {
-                println!("HALÅÅÅPPPPPSAD A=?SD) =S)D ");
-                // println!("v1 = {:#?}, v2 = {:#?}, ", v1, v2);
-
+            (Expr::Var(v1), _, Expr::Var(_)) => {
                 let var_ptr = self.get_variable(&v1);
                 let new_val = self.compile_int_expr(old_val, op, val);
-                // println!("new_val = {:#?}", new_val);
 
                 self.builder.build_store(*var_ptr, new_val)
             }
@@ -259,7 +252,8 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
                 let left_val = self.compile_stmt(l);
                 let right_val = self.compile_stmt(r);
                 self.compile_int_expr(left_val, op, right_val)
-            } // _ => panic!("Invalid Bin expr!"),
+            }
+            // _ => panic!("Invalid Bin expr!"),
         }
     }
 
@@ -318,8 +312,40 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
         }
     }
 
+    fn compile_cond(&mut self, cond: Expr) -> IntValue<'ctx> { 
+        match cond.clone() {
+            Expr::Int(_) => self.compile_stmt(cond),
+            Expr::Bool(_) => self.compile_stmt(cond),
+            Expr::Var(_) => self.compile_stmt(cond),
+            Expr::VarExpr(v, op, r) => match *v {
+                Expr::Var(_) => {
+                    let left = self.compile_stmt(*v);
+                    let right = self.compile_stmt(*r);
+
+                    self.compile_bool_expr(left, op, right)
+                }
+                Expr::Int(_) => {
+                    let left = self.compile_stmt(*v);
+                    let right = self.compile_stmt(*r);
+
+                    self.compile_bool_expr(left, op, right)
+                }
+                Expr::Bool(_) => {
+                    let left = self.compile_stmt(*v);
+                    let right = self.compile_stmt(*r);
+
+                    self.compile_bool_expr(left, op, right)
+                }
+                _ => panic!("Invalid Var expr comparsion!"),
+            },
+
+            _ => panic!("Invalid cond stmt!"),
+        }
+    }
+
     fn compile_if(&mut self, cond: Expr, block: Vec<Expr>) -> InstructionValue<'ctx> {
-        let cond = self.compile_stmt(cond);
+        let cond = self.compile_cond(cond);
+
         let then_block = self.context.append_basic_block(self.fn_value(), "then");
         let cont_block = self.context.append_basic_block(self.fn_value(), "cont");
 
@@ -345,14 +371,14 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
         block1: Vec<Expr>,
         block2: Vec<Expr>,
     ) -> InstructionValue<'ctx> {
-        let condition = self.compile_stmt(cond);
+        let cond = self.compile_cond(cond);
 
         let basic_block1 = self.context.append_basic_block(self.fn_value(), "block1");
         let basic_block2 = self.context.append_basic_block(self.fn_value(), "block2");
         let cont_block = self.context.append_basic_block(self.fn_value(), "cont");
 
         self.builder
-            .build_conditional_branch(condition, basic_block1, basic_block2);
+            .build_conditional_branch(cond, basic_block1, basic_block2);
 
         self.builder.position_at_end(basic_block1);
         self.compile_block(block1);
@@ -378,19 +404,15 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
         let do_block = self.context.append_basic_block(self.fn_value(), "do");
         let cont_block = self.context.append_basic_block(self.fn_value(), "cont");
 
-        self.builder.build_conditional_branch(
-            self.compile_stmt(cond.clone()),
-            do_block,
-            cont_block,
-        );
+        let cond = self.compile_cond(cond);
+
+        self.builder
+            .build_conditional_branch(cond, do_block, cont_block);
         self.builder.position_at_end(do_block);
         self.compile_block(block);
 
-        self.builder.build_conditional_branch(
-            self.compile_stmt(cond.clone()),
-            do_block,
-            cont_block,
-        );
+        self.builder
+            .build_conditional_branch(cond, do_block, cont_block);
         self.builder.position_at_end(cont_block);
 
         let phi = self.builder.build_phi(self.context.i32_type(), "while");
@@ -775,6 +797,79 @@ mod parse_tests {
         if t {
             assert!(llvm(p).is_ok());
         }
+
+        let p = parser(
+            "        
+            fn testfn3() -> i32 {
+                let f: bool = true && true;
+                let n: i32 = 1;
+                if f == true {
+                    n += 1;
+                    f = false;
+                };
+                return n;    
+            }
+
+            fn main() -> i32 {
+                {{{ return testfn3(); }}}
+            }",
+        )
+        .unwrap()
+        .1;
+        let t = type_checker(p.clone());
+
+        if t {
+            assert!(llvm(p).is_ok());
+        }
+
+        let p = parser(
+            "        
+            fn testfn3() -> i32 {
+                let f: bool = true && true;
+                let n: i32 = 1;
+                if 1 == 1 {
+                    n += 1;
+                    f = false;
+                };
+                return n;    
+            }
+
+            fn main() -> i32 {
+                {{{ return testfn3(); }}}
+            }",
+        )
+        .unwrap()
+        .1;
+        let t = type_checker(p.clone());
+
+        if t {
+            assert!(llvm(p).is_ok());
+        }
+
+        let p = parser(
+            "        
+            fn testfn3() -> i32 {
+                let f: bool = true && true;
+                let n: i32 = 1;
+                if true == true {
+                    n += 1;
+                    f = false;
+                };
+                return n;    
+            }
+
+            fn main() -> i32 {
+                {{{ return testfn3(); }}}
+            }",
+        )
+        .unwrap()
+        .1;
+        let t = type_checker(p.clone());
+
+        if t {
+            assert!(llvm(p).is_ok());
+        }
+
     }
 
     #[test]

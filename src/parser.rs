@@ -186,8 +186,11 @@ fn parse_args(input: &str) -> IResult<&str, Vec<Expr>> {
 }
 
 fn parse_var_expr(input: &str) -> IResult<&str, Expr> {
-    let (substring, (var, op, expr)) =
-        tuple((parse_var, parse_op, alt((parse_bin_expr, parse_var))))(input)?;
+    let (substring, (var, op, expr)) = tuple((
+        alt((parse_int, parse_bool, parse_var)),
+        parse_op,
+        alt((parse_bin_expr, parse_var)),
+    ))(input)?;
 
     Ok((substring, Expr::VarExpr(Box::new(var), op, Box::new(expr))))
 }

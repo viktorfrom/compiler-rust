@@ -32,11 +32,20 @@ struct Opt {
 pub fn cli() {
     let opt = Opt::from_args();
 
-    let test = " fn main() -> i32 {
-        let a:i32 = 2;
-        let b:i32 = 3;
-        let c:i32 = a + b; 
-        return c} ";
+    let test = "        
+        fn testfn3() -> i32 {
+            let f: bool = true && true;
+            let n: i32 = 1;
+            if true && true {
+                n += 1;
+                f = false;
+            };
+            return n;    
+        }
+
+        fn main() -> i32 {
+            {{{ return testfn3(); }}}
+        }";
 
     let p = program();
     let mut ast = match parser(&test) {
