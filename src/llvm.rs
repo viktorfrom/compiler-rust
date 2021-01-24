@@ -206,15 +206,15 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
 
                 self.builder.build_store(*var_ptr, new_val)
             }
-            // (Expr::Var(v1), _, Expr::Var(v2)) => {
-            //     println!("v1 = {:#?}, v2 = {:#?}, ", v1, v2);
+            (Expr::Var(v1), _, Expr::Var(v2)) => {
+                println!("v1 = {:#?}, v2 = {:#?}, ", v1, v2);
 
-            //     let var_ptr = self.get_variable(&v1);
-            //     let new_val = self.compile_int_expr(old_val, op, val);
-            //     println!("new_val = {:#?}", new_val);
+                let var_ptr = self.get_variable(&v1);
+                let new_val = self.compile_int_expr(old_val, op, val);
+                println!("new_val = {:#?}", new_val);
 
-            //     self.builder.build_store(*var_ptr, new_val)
-            // }
+                self.builder.build_store(*var_ptr, new_val)
+            }
             _ => panic!("Invalid Var op!"),
         }
     }
@@ -250,12 +250,12 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
                 }
             }
             (_, Expr::BinExpr(_, _, _)) => self.compile_stmt(r),
-            // (_, _) => {
-            //     let left_val = self.compile_stmt(l);
-            //     let right_val = self.compile_stmt(r);
-            //     self.compile_int_expr(left_val, op, right_val)
-            // } 
-            _ => panic!("Invalid Bin expr!"),
+            (_, _) => {
+                let left_val = self.compile_stmt(l);
+                let right_val = self.compile_stmt(r);
+                self.compile_int_expr(left_val, op, right_val)
+            } 
+            // _ => panic!("Invalid Bin expr!"),
         }
     }
 
@@ -703,7 +703,7 @@ mod parse_tests {
         }
 
         let p =
-            parser("fn main() -> bool { let a: bool = true; let b: bool = a > false return b }")
+            parser("fn main() -> bool { let a: bool = true; let b: bool = a > false; return b }")
                 .unwrap()
                 .1;
         let t = type_checker(p.clone());
@@ -712,6 +712,10 @@ mod parse_tests {
             assert!(llvm(p).is_ok());
         }
 
+    }
+
+    #[test]
+    fn test_llvm_let_var_expr() {
         let p = parser(" fn main() -> i32 {let a: i32 = 3; a += 2; return a} ")
             .unwrap()
             .1;
@@ -739,7 +743,7 @@ mod parse_tests {
             assert!(llvm(p).is_ok());
         }
 
-        let p = parser(" fn main() -> i32 {let a: i32 = 3; a /= 2; return a} ")
+        let p = parser(" fn main() -> i32 {let a: i32 = 3; a *= 2; return a} ")
             .unwrap()
             .1;
         let t = type_checker(p.clone());
@@ -818,6 +822,24 @@ mod parse_tests {
     #[test]
     fn test_llvm_fn() {
         let p = parser(" fn testfn() -> i32 {return 2} fn main() -> i32 {return testfn()} ")
+            .unwrap()
+            .1;
+        let t = type_checker(p.clone());
+
+        if t {
+            assert!(llvm(p).is_ok());
+        }
+
+        let p = parser(" fn testfn2() -> i32 {return 2} fn testfn() -> i32 {return 1} fn main() -> i32 {let a:i32 = testfn() + testfn2(); return a} ")
+            .unwrap()
+            .1;
+        let t = type_checker(p.clone());
+
+        if t {
+            assert!(llvm(p).is_ok());
+        }
+
+        let p = parser(" fn testfn() -> i32 { if false { return 1 } else { return 3 }; return 2 } fn main() -> i32 {return testfn()} ")
             .unwrap()
             .1;
         let t = type_checker(p.clone());
