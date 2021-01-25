@@ -109,24 +109,25 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
 
             Expr::BinExpr(l, op, r) => self.compile_bin_expr(*l, op, *r),
 
-            Expr::FnCall(func_name, _args) => {
-                let name = match *func_name {
-                    Expr::Var(v) => v,
-                    _ => panic!("Invalid Fn Var!"),
-                };
-
-                let function = self.module.get_function(&name).unwrap();
-                let call = self
-                    .builder
-                    .build_call(function, &[], &name)
-                    .try_as_basic_value()
-                    .left()
-                    .unwrap();
-                match call {
-                    value => value.into_int_value(),
-                }
-            }
+            Expr::FnCall(func_name, args) => self.compile_fn_call(*func_name, args),
             _ => panic!("Invalid compile stmt!"),
+        }
+    }
+    fn compile_fn_call(&mut self, func_name: Expr, _args: Vec<Expr>) -> IntValue<'ctx> {
+        let name = match func_name {
+            Expr::Var(v) => v,
+            _ => panic!("Invalid Fn Var!"),
+        };
+
+        let function = self.module.get_function(&name).unwrap();
+        let call = self
+            .builder
+            .build_call(function, &[], &name)
+            .try_as_basic_value()
+            .left()
+            .unwrap();
+        match call {
+            value => value.into_int_value(),
         }
     }
 
@@ -156,9 +157,8 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
                     _ => panic!("Invalid Let expr type!"),
                 };
                 let val = self.compile_stmt(expr);
-                let store = self.builder.build_store(ptr_val, val);
+                return self.builder.build_store(ptr_val, val)
 
-                store
             }
             _ => panic!("Invalid Expr!"),
         }
@@ -256,8 +256,7 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
                 let left_val = self.compile_stmt(l);
                 let right_val = self.compile_stmt(r);
                 self.compile_int_expr(left_val, op, right_val)
-            }
-            // _ => panic!("Invalid Bin expr!"),
+            } // _ => panic!("Invalid Bin expr!"),
         }
     }
 
@@ -316,7 +315,7 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
         }
     }
 
-    fn compile_cond(&mut self, cond: Expr) -> IntValue<'ctx> { 
+    fn compile_cond(&mut self, cond: Expr) -> IntValue<'ctx> {
         match cond.clone() {
             Expr::Int(_) => self.compile_stmt(cond),
             Expr::Bool(_) => self.compile_stmt(cond),
@@ -744,10 +743,11 @@ mod parse_tests {
             assert!(llvm(p).is_ok());
         }
     }
-        
+
     #[test]
     fn test_llvm_let_fn_call() {
-        let p = parser("
+        let p = parser(
+            "
                 fn testfn() -> i32 {
                 let b: i32 = (((1 + 2 + 3)));
                 return b
@@ -757,9 +757,10 @@ mod parse_tests {
                 let g: i32 = testfn();
                 return g
             }
-        ")
-            .unwrap()
-            .1;
+        ",
+        )
+        .unwrap()
+        .1;
         let t = type_checker(p.clone());
 
         if t {
@@ -897,7 +898,6 @@ mod parse_tests {
         if t {
             assert!(llvm(p).is_ok());
         }
-
     }
 
     #[test]

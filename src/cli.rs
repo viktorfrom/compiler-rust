@@ -32,40 +32,14 @@ struct Opt {
 pub fn cli() {
     let opt = Opt::from_args();
 
+    let p;
+    if !opt.llvm {
+        p = program1();
+    } else {
+        p = program2();
+    }
 
-    let test2  = "
-        fn testfn1() -> i32 {
-            return 7
-        }
-
-        fn testfn2() -> i32 {
-            return 3
-        }
-
-
-        fn main() -> i32 {
-            let g: i32 = testfn2();
-            return g
-        }
-    ";
-
-    let test = "        
-        fn testfn3() -> i32 {
-            let f: bool = true && true;
-            let n: i32 = 1;
-            if true && true {
-                n += 1;
-                f = false;
-            };
-            return n;    
-        }
-
-        fn main() -> i32 {
-            {{{ return testfn3(); }}}
-        }";
-
-    let p = program();
-    let mut ast = match parser(&test2) {
+    let mut ast = match parser(&p) {
         Ok(res) => res,
         Err(e) => {
             panic!("Error: {:#}", e)
