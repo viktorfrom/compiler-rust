@@ -1,10 +1,11 @@
 use structopt::StructOpt;
 
 use crate::ast::*;
+use crate::interpreter::*;
+use crate::llvm::*;
 use crate::parser::*;
 use crate::program::*;
 use crate::type_checker::*;
-use crate::{interpreter::interpreter, llvm::*};
 
 #[derive(Debug, StructOpt)]
 #[structopt(
@@ -31,7 +32,13 @@ struct Opt {
 pub fn cli() {
     let opt = Opt::from_args();
 
-    let p = program();
+    let p;
+    if !opt.llvm {
+        p = program1();
+    } else {
+        p = program2();
+    }
+
     let mut ast = match parser(&p) {
         Ok(res) => res,
         Err(e) => {
@@ -45,7 +52,7 @@ pub fn cli() {
 
     if type_checker(ast.clone().1) {
         if opt.llvm {
-            println!("llvm: ");
+            let _res = llvm(ast.1);
         } else {
             ast.1.push(Expr::Return(Box::new(Expr::FnCall(
                 Box::new(Expr::Var("main".to_string())),
