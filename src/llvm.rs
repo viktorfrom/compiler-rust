@@ -244,8 +244,12 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
                 }
             }
             (_, Expr::BinExpr(_, _, _)) => self.compile_stmt(r),
+            (Expr::FnCall(_, _), Expr::FnCall(_, _)) => {
+                let left_val = self.compile_stmt(l);
+                let right_val = self.compile_stmt(r);
+                self.compile_int_expr(left_val, op, right_val)
+            }
             (_, Expr::FnCall(_, _)) => {
-                // TODO: Add fn addition as well? 
                 return self.compile_stmt(r);
             }
             (_, _) => {
