@@ -19,9 +19,6 @@ cargo run -- --help
 "
 )]
 struct Opt {
-    #[structopt(short, long, default_value = "compiler")]
-    filename: String,
-
     #[structopt(short, long)]
     llvm: bool,
 
