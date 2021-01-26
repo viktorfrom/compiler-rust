@@ -74,7 +74,7 @@ fn eval_fn_call(fn_var: Expr, args: Vec<Expr>) -> ExprRep {
                     }
                 }
 
-                let res = interpreter(block);
+                let res = eval_block(block);
                 match (ret_type, res.clone()) {
                     (Type::Int, ExprRep::Int(_)) => res,
                     (Type::Bool, ExprRep::Bool(_)) => res,
@@ -87,11 +87,11 @@ fn eval_fn_call(fn_var: Expr, args: Vec<Expr>) -> ExprRep {
     }
 }
 
-fn eval_if(cond: Expr, block: Vec<Expr>) -> ExprRep {
+pub fn eval_if(cond: Expr, block: Vec<Expr>) -> ExprRep {
     match eval_expr(cond) {
         ExprRep::Bool(c) => {
             if c {
-                return interpreter(block);
+                return eval_block(block);
             }
             return ExprRep::Null;
         }
@@ -99,13 +99,29 @@ fn eval_if(cond: Expr, block: Vec<Expr>) -> ExprRep {
     }
 }
 
+fn eval_block(block: Vec<Expr>) -> ExprRep {
+    let mut res = ExprRep::Null;
+    for e in block.iter() {
+        res = eval_expr(e.clone());
+
+        // Check if the resulting expr contains a return value
+        match res {
+            ExprRep::Int(_) => break,
+            ExprRep::Bool(_) => break,
+            _ => continue,
+        }
+    }
+
+    res
+}
+
 fn eval_if_else(cond: Expr, block1: Vec<Expr>, block2: Vec<Expr>) -> ExprRep {
     match eval_expr(cond) {
         ExprRep::Bool(c) => {
             if c {
-                return interpreter(block1);
+                return eval_block(block1);
             } else {
-                return interpreter(block2);
+                return eval_block(block2);
             }
         }
         _ => panic!("IfElse stmt fail!"),
@@ -116,7 +132,7 @@ fn eval_while(cond: Expr, block: Vec<Expr>) -> ExprRep {
     match eval_expr(cond) {
         ExprRep::Bool(c) => {
             if c {
-                return interpreter(block);
+                return eval_block(block);
             }
             return ExprRep::Null;
         }
@@ -880,6 +896,49 @@ mod interpreter_tests {
                 )))
             ]),
             ExprRep::Int(5)
+        );
+        assert_eq!(
+            interpreter(vec![
+                Expr::Fn(
+                    Box::new(Expr::Var("testfn2".to_string())),
+                    vec![],
+                    Type::Int,
+                    vec![
+                        Expr::If(
+                            Box::new(Expr::Bool(true)),
+                            vec![Expr::Return(Box::new(Expr::Int(1)))],
+                        ),
+                        Expr::Return(Box::new(Expr::Int(2))),
+                    ]
+                ),
+                Expr::Return(Box::new(Expr::FnCall(
+                    Box::new(Expr::Var("testfn2".to_string())),
+                    vec![]
+                )))
+            ]),
+            ExprRep::Int(1)
+        );
+        assert_eq!(
+            interpreter(vec![
+                Expr::Fn(
+                    Box::new(Expr::Var("testfn3".to_string())),
+                    vec![],
+                    Type::Int,
+                    vec![
+                        Expr::IfElse(
+                            Box::new(Expr::Bool(true)),
+                            vec![Expr::Return(Box::new(Expr::Int(3)))],
+                            vec![Expr::Return(Box::new(Expr::Int(1)))],
+                        ),
+                        Expr::Return(Box::new(Expr::Int(2))),
+                    ]
+                ),
+                Expr::Return(Box::new(Expr::FnCall(
+                    Box::new(Expr::Var("testfn3".to_string())),
+                    vec![]
+                )))
+            ]),
+            ExprRep::Int(3)
         );
     }
 

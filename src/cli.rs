@@ -29,12 +29,7 @@ struct Opt {
 pub fn cli() {
     let opt = Opt::from_args();
 
-    let p;
-    if !opt.llvm {
-        p = program1();
-    } else {
-        p = program2();
-    }
+    let p = program();
 
     let mut ast = match parser(&p) {
         Ok(res) => res,
