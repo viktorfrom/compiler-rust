@@ -7,7 +7,8 @@ use self::inkwell::{
     context::Context,
     execution_engine::{ExecutionEngine, JitFunction},
     module::Module,
-    values::{FunctionValue, InstructionValue, IntValue, PointerValue},
+    types::BasicTypeEnum,
+    values::{BasicValueEnum, FunctionValue, InstructionValue, IntValue, PointerValue},
     IntPredicate, OptimizationLevel,
 };
 
@@ -113,19 +114,26 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
             _ => panic!("Invalid compile stmt!"),
         }
     }
-    fn compile_fn_call(&mut self, func_name: Expr, _args: Vec<Expr>) -> IntValue<'ctx> {
+    fn compile_fn_call(&mut self, func_name: Expr, args: Vec<Expr>) -> IntValue<'ctx> {
         let name = match func_name {
             Expr::Var(v) => v,
             _ => panic!("Invalid Fn Var!"),
         };
 
         let function = self.module.get_function(&name).unwrap();
+
+        let argsv: Vec<BasicValueEnum> = args
+            .iter()
+            .map(|a| self.compile_stmt(a.clone()).into())
+            .collect();
+
         let call = self
             .builder
-            .build_call(function, &[], &name)
+            .build_call(function, &argsv, &name)
             .try_as_basic_value()
             .left()
             .unwrap();
+
         match call {
             value => value.into_int_value(),
         }
@@ -157,8 +165,7 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
                     _ => panic!("Invalid Let expr type!"),
                 };
                 let val = self.compile_stmt(expr);
-                return self.builder.build_store(ptr_val, val)
-
+                return self.builder.build_store(ptr_val, val);
             }
             _ => panic!("Invalid Expr!"),
         }
@@ -444,8 +451,7 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
             self.statement = self.compile_expr(expr);
 
             if self.statement.1 {
-                let asd = self.statement.0;
-                return asd;
+                return self.statement.0;
             }
             last_cmd = Some(self.statement.0);
         }
@@ -459,17 +465,26 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
     fn compile_fn(
         &mut self,
         fn_var: Expr,
-        _params: Vec<(Expr, Type)>,
+        params: Vec<(Expr, Type)>,
         _ret_type: Type,
         block: Vec<Expr>,
     ) -> InstructionValue<'ctx> {
-        let u32_type = self.context.i32_type();
-        let fn_type = u32_type.fn_type(&[], false);
+        let param_types: Vec<BasicTypeEnum> = params
+            .iter()
+            .map(|param| match param.1 {
+                Type::Int => self.context.i32_type().into(),
+                Type::Bool => self.context.bool_type().into(),
+                _ => unreachable!(),
+            })
+            .collect();
+
+        let fn_type = self.context.i32_type().fn_type(&param_types, false);
 
         let name = match fn_var {
             Expr::Var(v) => v,
             _ => panic!("Invalid fn var!"),
         };
+
         let function = self.module.add_function(&name, fn_type, None);
         let basic_block = self.context.append_basic_block(function, &name);
 
