@@ -30,6 +30,9 @@ pub struct Compiler<'a, 'ctx> {
     pub fn_value_opt: Option<FunctionValue<'ctx>>,
 
     variables: HashMap<String, PointerValue<'ctx>>,
+    fn_params: HashMap<String, Vec<String>>,
+    fn_args: HashMap<String, Vec<Expr>>,
+
     statement: (InstructionValue<'ctx>, bool),
 }
 
@@ -41,6 +44,7 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
 
     #[inline]
     fn get_variable(&self, name: &str) -> &PointerValue<'ctx> {
+        println!("name = {:#?}", name);
         match self.variables.get(name) {
             Some(var) => var,
             None => panic!("ERROR: Can't find matching variable"),
@@ -114,6 +118,7 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
             _ => panic!("Invalid compile stmt!"),
         }
     }
+
     fn compile_fn_call(&mut self, func_name: Expr, args: Vec<Expr>) -> IntValue<'ctx> {
         let name = match func_name {
             Expr::Var(v) => v,
@@ -490,6 +495,43 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
 
         self.fn_value_opt = Some(function);
         self.builder.position_at_end(basic_block);
+
+        match self.fn_args.get(&name) {
+            Some(g) => {
+                println!("g = {:#?}", g);
+                if params.len() != g.len() {
+                    panic!("rip")
+                }
+                let mut test: Vec<i32> = Vec::new();
+                for i in g {
+                    match i {
+                        Expr::Int(j) => test.push(*j),
+                        _ => panic!(),
+                    }
+                }
+
+                let mut test2: Vec<String> = Vec::new();
+                for i in params {
+                    match i {
+                        (Expr::Var(j), _) => test2.push(j),
+                        _ => panic!(),
+                    }
+                }
+
+                for i in 0..test.len() {
+                    let asd = test2[i].clone();
+                    let asd2 = test[i];
+                    self.compile_expr(&Expr::Let(
+                        Box::new(Expr::Var(asd.to_string())),
+                        Type::Int,
+                        Box::new(Expr::Int(asd2)),
+                    ));
+                }
+            }
+            None => (),
+        }
+        println!("variables = {:#?}", self.variables);
+
         self.compile_block(block)
     }
 }
@@ -509,9 +551,38 @@ pub fn llvm(ast: Vec<Expr>) -> Result<(), Box<dyn Error>> {
         execution_engine: &execution_engine,
         fn_value_opt: None,
         variables: HashMap::new(),
+        fn_params: HashMap::new(),
+        fn_args: HashMap::new(),
 
         statement: (builder.build_return(None), false),
     };
+
+    for expr in ast.clone() {
+        match expr {
+            Expr::Fn(_, _, _, b) => {
+                for i in b {
+                    match i {
+                        Expr::Return(r) => match *r {
+                            Expr::FnCall(v, a) => match *v {
+                                Expr::Var(s) => {
+                                    let fn_name = s;
+                                    let mut fn_args = Vec::new();
+                                    for j in a {
+                                        fn_args.push(j);
+                                    }
+                                    compiler.fn_args.insert(fn_name.to_string(), fn_args);
+                                }
+                                _ => continue,
+                            },
+                            _ => continue,
+                        },
+                        _ => continue,
+                    }
+                }
+            }
+            _ => continue,
+        }
+    }
 
     for expr in ast {
         match expr {
