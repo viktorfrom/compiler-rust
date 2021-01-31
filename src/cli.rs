@@ -31,10 +31,7 @@ pub fn cli() {
 
     let p = program();
 
-    let test =
-        "fn testfn(a:i32) -> i32 {return a} fn main() -> i32 {return testfn(1)}";
-
-    let mut ast = match parser(&test) {
+    let mut ast = match parser(&p) {
         Ok(res) => res,
         Err(e) => {
             panic!("Error: {:#}", e)
