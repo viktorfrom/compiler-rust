@@ -51,7 +51,7 @@ fn eval_fn_call(fn_var: Expr, args: Vec<Expr>) -> ExprRep {
         Expr::Var(fn_var) => match read_fn(&fn_var) {
             ExprRep::Fn(params, ret_type, block) => {
                 if params.len() != args.clone().len() {
-                    panic!("params != args")
+                    panic!("params len != args len")
                 }
 
                 for i in 0..params.len() {

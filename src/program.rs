@@ -16,19 +16,21 @@ pub fn program() -> String {
             {{{ return testfn1(true); }}}
         }
 
-        fn testfn3(d: bool, e: bool) -> i32 {
-            let f: bool = d && e;
-            let n: i32 = 1;
-            while f == true {
+        fn testfn3(d: bool, e: i32) -> i32 {
+            let f: bool = d && true;
+            let n: i32 = e;
+            if f == true {
                 n += 1;
                 f = false;
             };
             return n;    
-        }
+        } 
 
         fn main() -> i32 {
-            let g: i32 = testfn2() + testfn3(true, true);
-            return g
+            let g: i32 = testfn2();
+            let h: i32 = testfn3(true, 1);
+            let i: i32 = g + h;
+            return i
         }
 
         "
