@@ -54,11 +54,13 @@ fn eval_fn_call(fn_var: Expr, args: Vec<Expr>) -> ExprRep {
                     panic!("params len != args len")
                 }
 
-                for i in 0..params.len() {
+                for _ in 0..params.len() {
+                    let mut i = 0;
                     for x in params.clone() {
+                        let eval_arg = eval_expr(args[i].clone());
+                        i += 1;
                         match &x {
                             (Expr::Var(v), t) => {
-                                let eval_arg = eval_expr(args[i].clone());
                                 match (t, eval_arg.clone()) {
                                     (Type::Int, ExprRep::Int(_)) => {
                                         insert_var(ExprRep::Var(v.to_string()), eval_arg)
